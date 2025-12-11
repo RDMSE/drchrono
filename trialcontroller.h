@@ -14,7 +14,7 @@ struct GroupInfo {
 class TrialController
 {
 public:
-    explicit TrialController(QSqlDatabase& db);
+    explicit TrialController(const QSqlDatabase& db);
 
     int createOrLoadTrial(const QString& trialName);
 
@@ -35,12 +35,30 @@ public:
     );
 
     QVector<GroupInfo> loadGroupsFromConfiguration(const QString& configPath);
+    QString loadTrialNameFromConfiguration(const QString& configPath);
 
     QVector<GroupInfo> getTrialGroups();
+
+    bool loadActiveTrial();
+
+    bool startTrial();
+
+    bool stopTrial();
+
+    QString getActiveTrialName() const {
+        return m_activeTrialName;
+    }
+
+    QString getActiveTrialStartDateTime() const {
+        return m_activeTrialStartDateTime;
+    }
 
 private:
     QSqlDatabase m_db;
     int m_trialId = -1;
+    QString m_activeTrialName = "";
+    QString m_activeTrialStartDateTime = "";
+
 };
 
 #endif // TRIALCONTROLLER_H

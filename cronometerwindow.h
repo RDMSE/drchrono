@@ -31,6 +31,7 @@ private slots:
     void on_btnStart_clicked();
 
     void startCounterTimer();
+    void stopCounterTimer();
     void updateCounterTimer();
     void updateRegisterButton();
 
@@ -41,11 +42,10 @@ private:
     const QString timeFormat = "HH:mm:ss";
     const QString dbPath = "cronometro.db";
 
-
     void setControlsStatus(const bool status);
 
     QTimer timer;
-    QTime startTime;
+    QDateTime startTime;
     DBManager chronoDb;
     TrialController* controller;
 };

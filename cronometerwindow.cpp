@@ -13,22 +13,49 @@ CronometerWindow::CronometerWindow(QWidget *parent)
     , chronoDb(dbPath) {
     ui->setupUi(this);
 
-    QSettings settings("settings.ini", QSettings::IniFormat);
-
-    QStringList groups = settings.value("Groups").toString().split(",", Qt::SkipEmptyParts);
-    std::transform(groups.begin(), groups.end(), groups.begin(), [](const QString &s){ return s.trimmed();});
-
     ui->lstGroups->clear();
-    ui->lstGroups->addItems(groups);
 
-    setControlsStatus(false);
+    controller = new TrialController(QSqlDatabase::database());
+
+    if (controller->loadActiveTrial()) {
+
+        auto activeGroupsInfo = controller->getTrialGroups();
+        QStringList groups;
+        std::transform( activeGroupsInfo.begin(),
+                        activeGroupsInfo.end(),
+                        std::back_inserter(groups),
+                        [](const GroupInfo& info) { return info.name; }
+                    );
+
+        ui->lstGroups->addItems(groups);
+        qDebug() << groups;
+
+        QString activeTrialStartTime = controller->getActiveTrialStartDateTime();
+        startTime = QDateTime::fromString(activeTrialStartTime, Qt::ISODate);
+        setControlsStatus(true);
+    } else {
+        auto groupsInfo = controller->loadGroupsFromConfiguration("settings.ini");
+        QStringList groupNames;
+        std::transform( groupsInfo.begin(), 
+                        groupsInfo.end(), 
+                        std::back_inserter(groupNames), 
+                        [](const GroupInfo& info) { return info.name; }
+                    );
+
+        ui->lstGroups->addItems(groupNames);
+        qDebug() << groupNames;
+        startTime = QDateTime::currentDateTime();
+
+        setControlsStatus(false);
+    }
+    updateCounterTimer();
+    startCounterTimer();
 
     ui->btnRegister->setEnabled(false);
 
     connect(&timer, &QTimer::timeout, this, &CronometerWindow::updateCounterTimer);
     connect(ui->lstGroups, &QComboBox::currentIndexChanged, this, &CronometerWindow::updateRegisterButton);
     connect(ui->edtPlaque, &QLineEdit::textChanged, this, &CronometerWindow::updateRegisterButton);
-    qDebug() << groups;
 }
 
 CronometerWindow::~CronometerWindow() {
@@ -50,10 +77,17 @@ void CronometerWindow::on_btnStart_clicked() {
     }
 
     started = !started;
-    setControlsStatus(started);
-    startCounterTimer();
-}
 
+    if (started) {
+        controller->startTrial();
+        startCounterTimer();
+    } else {
+        controller->stopTrial();
+        stopCounterTimer();
+    }
+
+    setControlsStatus(started);
+}
 
 void CronometerWindow::closeEvent(QCloseEvent *event) {
     if(!started) {
@@ -63,19 +97,19 @@ void CronometerWindow::closeEvent(QCloseEvent *event) {
     }
 }
 
-
 void CronometerWindow::startCounterTimer() {
-    if (started) {
-        startTime = QTime::currentTime();  // marca hora inicial
-        ui->lblTime->setText("00:00:00");
-        timer.start(1000); // atualiza a cada 1s
-    } else {
-        timer.stop();
-    }
+    //startTime = QTime::currentTime();  // marca hora inicial
+    //ui->lblTime->setText("00:00:00");
+    timer.start(1000); // atualiza a cada 1s
 }
 
+void CronometerWindow::stopCounterTimer() {
+    timer.stop();
+}
+
+
 void CronometerWindow::updateCounterTimer() {
-    int secs = startTime.secsTo(QTime::currentTime());
+    int secs = startTime.secsTo(QDateTime::currentDateTime());
     QTime display(0, 0);
     display = display.addSecs(secs);
 
