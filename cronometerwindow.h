@@ -7,6 +7,7 @@
 #include <QTime>
 #include <QCloseEvent>
 #include "dbmanager.h"
+#include "trialcontroller.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -46,5 +47,6 @@ private:
     QTimer timer;
     QTime startTime;
     DBManager chronoDb;
+    TrialController* controller;
 };
 #endif // CRONOMETERWINDOW_H

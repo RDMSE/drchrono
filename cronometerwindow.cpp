@@ -29,7 +29,6 @@ CronometerWindow::CronometerWindow(QWidget *parent)
     connect(ui->lstGroups, &QComboBox::currentIndexChanged, this, &CronometerWindow::updateRegisterButton);
     connect(ui->edtPlaque, &QLineEdit::textChanged, this, &CronometerWindow::updateRegisterButton);
     qDebug() << groups;
-
 }
 
 CronometerWindow::~CronometerWindow() {

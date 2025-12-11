@@ -34,6 +34,10 @@ public:
         const QString& notes
     );
 
+    QVector<GroupInfo> loadGroupsFromConfiguration(const QString& configPath);
+
+    QVector<GroupInfo> getTrialGroups();
+
 private:
     QSqlDatabase m_db;
     int m_trialId = -1;
