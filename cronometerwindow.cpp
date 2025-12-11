@@ -9,7 +9,8 @@
 
 CronometerWindow::CronometerWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::CronometerWindow) {
+    , ui(new Ui::CronometerWindow)
+    , chronoDb(dbPath) {
     ui->setupUi(this);
 
     QSettings settings("settings.ini", QSettings::IniFormat);
@@ -27,9 +28,8 @@ CronometerWindow::CronometerWindow(QWidget *parent)
     connect(&timer, &QTimer::timeout, this, &CronometerWindow::updateCounterTimer);
     connect(ui->lstGroups, &QComboBox::currentIndexChanged, this, &CronometerWindow::updateRegisterButton);
     connect(ui->edtPlaque, &QLineEdit::textChanged, this, &CronometerWindow::updateRegisterButton);
-
-
     qDebug() << groups;
+
 }
 
 CronometerWindow::~CronometerWindow() {

@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QTime>
 #include <QCloseEvent>
+#include "dbmanager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -37,11 +38,13 @@ private:
 
     bool started = false;
     const QString timeFormat = "HH:mm:ss";
+    const QString dbPath = "cronometro.db";
 
 
     void setControlsStatus(const bool status);
 
     QTimer timer;
     QTime startTime;
+    DBManager chronoDb;
 };
 #endif // CRONOMETERWINDOW_H
