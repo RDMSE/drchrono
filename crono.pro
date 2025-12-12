@@ -6,6 +6,9 @@ CONFIG += c++20
 
 DEFINES += NOMINMAX
 
+# Application icon
+RC_ICONS = dr.ico
+
 include(third_party/QXlsx/QXlsx/QXlsx.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
