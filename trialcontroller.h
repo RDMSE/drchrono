@@ -4,10 +4,17 @@
 #include <QString>
 #include <QSqlDatabase>
 #include <QVector>
+#include <optional>
 
 struct GroupInfo {
     int id;
     QString name;
+};
+struct TrialInfo {
+    int id;
+    QString name;
+    QString startDateTime;
+    QString endDateTime;
 };
 
 
@@ -19,6 +26,8 @@ public:
     int createOrLoadTrial(const QString& trialName);
 
     int getTrialId() const;
+
+    std::optional<TrialInfo> getTrialInformationByName(const QString& name);
 
     QVector<GroupInfo> loadGroups();
 
@@ -37,7 +46,7 @@ public:
     QVector<GroupInfo> loadGroupsFromConfiguration(const QString& configPath);
     QString loadTrialNameFromConfiguration(const QString& configPath);
 
-    QVector<GroupInfo> getTrialGroups();
+    std::optional<QVector<GroupInfo>> getTrialGroups();
 
     bool loadActiveTrial();
 

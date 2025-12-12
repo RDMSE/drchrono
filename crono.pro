@@ -1,22 +1,31 @@
-QT       += core gui sql
+QT       += core gui sql xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++17
+CONFIG += c++20
+
+DEFINES += NOMINMAX
+
+include(third_party/QXlsx/QXlsx/QXlsx.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+INCLUDEPATH += \
+    $$PWD/third_party/QXlsx/QXlsx
+
 SOURCES += \
     dbmanager.cpp \
     main.cpp \
     cronometerwindow.cpp \
+    report.cpp \
     trialcontroller.cpp
 
 HEADERS += \
     cronometerwindow.h \
     dbmanager.h \
+    report.h \
     trialcontroller.h
 
 FORMS += \

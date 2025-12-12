@@ -43,6 +43,3 @@
 # build directories
 build/
 bin/
-
-# Temporary ignore while setting up submodule
-third_party/

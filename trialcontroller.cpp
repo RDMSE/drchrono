@@ -32,7 +32,7 @@ int TrialController::createOrLoadTrial(const QString& trialName) {
     )";
     selectQuery.prepare(sql);
     selectQuery.bindValue(":name", trialName);
-    if (!selectQuery.exec() /*|| !selectQuery.next()*/) {
+    if (!selectQuery.exec()) {
         qWarning() << "[DB] error loading trial:" << selectQuery.lastError().text();
         return -1;
     }
@@ -40,10 +40,12 @@ int TrialController::createOrLoadTrial(const QString& trialName) {
     if(selectQuery.next())
         m_trialId = selectQuery.value(0).toInt();
 
+    m_activeTrialName = trialName;
+
     return m_trialId;
 }
 
-QVector<GroupInfo> TrialController::getTrialGroups() {
+    std::optional<QVector<GroupInfo>> TrialController::getTrialGroups() {
     QSqlQuery query(m_db);
 
     QString sql = R"(
@@ -55,7 +57,7 @@ QVector<GroupInfo> TrialController::getTrialGroups() {
 
     if (!query.exec()) {
         qWarning() << "[DB] Error reading trail groups";
-        return {};
+        return std::nullopt;
     }
 
     QVector<GroupInfo> result;
@@ -72,6 +74,32 @@ QVector<GroupInfo> TrialController::getTrialGroups() {
 
 int TrialController::getTrialId() const {
     return m_trialId;
+}
+
+std::optional<TrialInfo> TrialController::getTrialInformationByName(const QString& name) {
+    QSqlQuery selectQuery(m_db);
+    QString sql = R"(
+        SELECT id, name, startDateTime, endDateTime
+        FROM trials
+        WHERE name = :name
+    )";
+
+    selectQuery.prepare(sql);
+    selectQuery.bindValue(":name", name);
+
+    if (!selectQuery.exec() || !selectQuery.next()) {
+        qWarning() << "[DB] Error fetching " << name << " trial";
+        return std::nullopt;
+    }
+
+    const TrialInfo info = {
+        .id             = selectQuery.value(0).toInt(),
+        .name           = selectQuery.value(1).toString().trimmed(),
+        .startDateTime  = selectQuery.value(2).toString().trimmed(),
+        .endDateTime    = selectQuery.value(3).toString().trimmed()
+    };
+
+    return info;
 }
 
 QVector<GroupInfo> TrialController::loadGroups() {
@@ -107,17 +135,23 @@ QVector<GroupInfo> TrialController::loadGroupsFromConfiguration(const QString& c
     auto existingGroups = getTrialGroups();
 
     QSet<QString> existingGroupNames;
-    for (const auto& g: existingGroups) {
-        existingGroupNames.insert(g.name);
+    if (existingGroups.has_value()) {
+        for (const auto& g: existingGroups.value()) {
+            existingGroupNames.insert(g.name);
+        }
     }
 
-    for(const auto& group: groups) {
+    for (const auto& group: groups) {
         if (!existingGroupNames.contains(group)) {
             addGroup(group);
         }
     }
 
-    return getTrialGroups();
+    auto savedGroups = getTrialGroups();
+    if (!savedGroups.has_value())
+        return {};
+
+    return savedGroups.value();
 }
 
 QString TrialController::loadTrialNameFromConfiguration(const QString& configPath) {
@@ -202,21 +236,39 @@ bool TrialController::loadActiveTrial() {
 }
 
 bool TrialController::startTrial() {
-    QSqlQuery query(m_db);
+    QSqlQuery updateQuery(m_db);
     QString sql = R"(
         UPDATE trials
-        SET startDateTime = :start
-        WHERE id = :id
+        SET
+            startDateTime = :start,
+            endDateTime = NULL
+        WHERE 1 = 1
+            AND id = :id
     )";
 
-    query.prepare(sql);
-    query.bindValue(":start", QDateTime::currentDateTime().toString(Qt::ISODate));
-    query.bindValue(":id", m_trialId);
+    updateQuery.prepare(sql);
+    updateQuery.bindValue(":start", QDateTime::currentDateTime().toString(Qt::ISODate));
+    updateQuery.bindValue(":id", m_trialId);
 
-    if (!query.exec()) {
-        qWarning() << "[DB] Error starting trial:" << query.lastError().text();
+    if (!updateQuery.exec()) {
+        qWarning() << "[DB] Error starting trial:" << updateQuery.lastError().text();
         return false;
     }
+
+    QSqlQuery selectQuery(m_db);
+    sql = R"(
+        SELECT name, startDateTime FROM trials WHERE id=:id
+    )";
+    selectQuery.prepare(sql);
+    selectQuery.bindValue(":id", m_trialId);
+
+    if (!selectQuery.exec() || !selectQuery.next()) {
+        qWarning() << "[DB] Error loading trial name:" << selectQuery.lastError().text();
+        return false;
+    }
+
+    m_activeTrialName = selectQuery.value(0).toString();
+    m_activeTrialStartDateTime = selectQuery.value(1).toString();
 
     return true;
 }

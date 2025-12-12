@@ -27,13 +27,13 @@ protected:
     void closeEvent(QCloseEvent *event) override;
 
 private slots:
-
-    void on_btnStart_clicked();
-
     void startCounterTimer();
     void stopCounterTimer();
     void updateCounterTimer();
     void updateRegisterButton();
+
+    void on_btnRegister_clicked();
+    void on_btnStart_clicked();
 
 private:
     Ui::CronometerWindow *ui;
@@ -43,6 +43,7 @@ private:
     const QString dbPath = "cronometro.db";
 
     void setControlsStatus(const bool status);
+    void disableControls();
 
     QTimer timer;
     QDateTime startTime;
