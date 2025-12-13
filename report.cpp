@@ -5,8 +5,6 @@
 #include <QSqlError>
 #include <algorithm>
 
-// Report::Report() {}
-
 bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabase db) {
 
     if (trialId == -1) return false;
