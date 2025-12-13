@@ -22,6 +22,7 @@ INCLUDEPATH += \
 
 SOURCES += \
     dbmanager.cpp \
+    excelutils.cpp \
     main.cpp \
     cronometerwindow.cpp \
     report.cpp \
@@ -30,6 +31,7 @@ SOURCES += \
 HEADERS += \
     cronometerwindow.h \
     dbmanager.h \
+    excelutils.h \
     report.h \
     trialcontroller.h
 
