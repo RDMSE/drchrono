@@ -6,6 +6,8 @@ CONFIG += c++20
 
 DEFINES += NOMINMAX
 
+VERSION = 0.1.0.0
+
 # Application icon
 RC_ICONS = dr.ico
 
