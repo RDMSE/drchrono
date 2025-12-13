@@ -44,6 +44,7 @@ private:
 
     void setControlsStatus(const bool status);
     void disableControls();
+    bool checkTrialIsClosed(const QString& trialName);
 
     QTimer timer;
     QDateTime startTime;

@@ -8,7 +8,6 @@
 #include "report.h"
 
 
-
 CronometerWindow::CronometerWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::CronometerWindow)
@@ -47,33 +46,37 @@ CronometerWindow::CronometerWindow(QWidget *parent)
 
         ui->lstGroups->addItems(groupNames);
         qDebug() << groupNames;
-        startTime = QDateTime::currentDateTime();
-        started = false;
-        setControlsStatus(started);
 
-        // verify if the loaded trial from settings is already finished on db
-        auto trialInfo = controller->getTrialInformationByName(controller->getActiveTrialName());
-        if (!trialInfo.has_value()) {
-            qFatal() << "Trial from settings not found on db: " << controller->getActiveTrialName();
-        }
+        if (checkTrialIsClosed(controller->getActiveTrialName())) {
+            auto trialInfo = controller->getTrialInformationByName(controller->getActiveTrialName());
 
-        if (!trialInfo.value().endDateTime.isEmpty()) {
-            QString message = QString("Trial %1 already exist on and it was started on %2 and finished on %3")
-                                  .arg(trialInfo.value().name).arg(trialInfo.value().startDateTime).arg(trialInfo.value().endDateTime);
+            QString message = QString("Trial '%1' already exist on and it was started on '%2' and finished on '%3'")
+            .arg(trialInfo.value().name).arg(trialInfo.value().startDateTime).arg(trialInfo.value().endDateTime);
             auto reply = QMessageBox::question(this, "Confirmation", message, QMessageBox::Yes | QMessageBox::No );
             if (reply == QMessageBox::No)
                 disableControls();
         }
 
+        startTime = QDateTime::currentDateTime();
+        started = false;
+        setControlsStatus(started);
     }
     updateCounterTimer();
-    //startCounterTimer();
 
     ui->btnRegister->setEnabled(false);
 
     connect(&timer, &QTimer::timeout, this, &CronometerWindow::updateCounterTimer);
     connect(ui->lstGroups, &QComboBox::currentIndexChanged, this, &CronometerWindow::updateRegisterButton);
     connect(ui->edtPlaque, &QLineEdit::textChanged, this, &CronometerWindow::updateRegisterButton);
+}
+
+bool CronometerWindow::checkTrialIsClosed(const QString& trialName) {
+    auto trialInfo = controller->getTrialInformationByName(trialName);
+    if (!trialInfo.has_value()) {
+        qFatal() << "Trial from settings not found on db: " << trialName;
+    }
+
+    return !trialInfo.value().endDateTime.isEmpty();
 }
 
 CronometerWindow::~CronometerWindow() {
@@ -110,8 +113,7 @@ void CronometerWindow::on_btnStart_clicked() {
     } else {
         controller->stopTrial();
         stopCounterTimer();
-        QString reportFileName = QString("REP_%1.xlsx").arg(controller->getActiveTrialName());
-        Report::exportExcel(controller->getTrialId(), reportFileName, QSqlDatabase::database());
+        ui->btnRegister->setEnabled(false);
     }
 
     setControlsStatus(started);
@@ -181,5 +183,8 @@ void CronometerWindow::on_btnRegister_clicked() {
             qWarning() << "Error saving time for athlete " << QString(group).append("-").append(placa);
         }
     }
+
+    QString reportFileName = QString("REP_%1.xlsx").arg(controller->getActiveTrialName());
+    Report::exportExcel(controller->getTrialId(), reportFileName, QSqlDatabase::database());
 }
 
