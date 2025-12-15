@@ -36,6 +36,7 @@ HEADERS += \
     trialcontroller.h
 
 FORMS += \
+    addNewEvent.ui \
     cronometerwindow.ui
 
 # Default rules for deployment.
