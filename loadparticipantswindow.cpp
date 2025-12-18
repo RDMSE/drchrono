@@ -1,5 +1,4 @@
 #include "loadparticipantswindow.h"
-#include "repository/trials/trialsrepository.h"
 #include "repository/registrations/registrationsrepository.h"
 #include "repository/athletes/athletesrepository.h"
 #include "repository/categories/categoriesrepository.h"
@@ -8,6 +7,20 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QApplication>
+#include <QFileInfo>
+#include <QSettings>
+#include <QFile>
+#include <QCoreApplication>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QLabel>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QWidget>
+#include <QMessageBox>
 
 LoadParticipantsWindow::LoadParticipantsWindow(DBManager& dbManager, QWidget *parent)
     : QDialog(parent)
@@ -26,6 +39,7 @@ LoadParticipantsWindow::LoadParticipantsWindow(DBManager& dbManager, QWidget *pa
     , progressBar(nullptr)
     , statusLabel(nullptr)
     , selectedTrialId(-1)
+    , activeTrialId(-1)
 {
     setupUI();
     loadBasicData();
@@ -37,7 +51,7 @@ LoadParticipantsWindow::~LoadParticipantsWindow()
 
 void LoadParticipantsWindow::setupUI()
 {
-    setWindowTitle("Carregar Participantes do Excel");
+    setWindowTitle("Load Participants from Excel");
     setModal(true);
     resize(900, 700);
 
@@ -51,26 +65,26 @@ void LoadParticipantsWindow::setupUI()
     trialCombo->setMinimumWidth(300);
     connect(trialCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &LoadParticipantsWindow::onTrialSelected);
-    formLayout->addRow("Evento:", trialCombo);
+    formLayout->addRow("Event:", trialCombo);
     
     // File selection
     fileLayout = new QHBoxLayout();
     filePathEdit = new QLineEdit();
-    filePathEdit->setPlaceholderText("Selecione um arquivo Excel (.xlsx)");
+    filePathEdit->setPlaceholderText("Select an Excel file (.xlsx)");
     filePathEdit->setReadOnly(true);
     
-    selectFileButton = new QPushButton("Selecionar Arquivo");
+    selectFileButton = new QPushButton("Select File");
     selectFileButton->setEnabled(false); // Initially disabled until event is selected
     connect(selectFileButton, &QPushButton::clicked, this, &LoadParticipantsWindow::selectFile);
     
     fileLayout->addWidget(filePathEdit);
     fileLayout->addWidget(selectFileButton);
-    formLayout->addRow("Arquivo Excel:", fileLayout);
+    formLayout->addRow("Excel File:", fileLayout);
     
     mainLayout->addLayout(formLayout);
     
     // Preview button
-    previewButton = new QPushButton("Visualizar Dados");
+    previewButton = new QPushButton("Preview Data");
     previewButton->setEnabled(false);
     connect(previewButton, &QPushButton::clicked, this, &LoadParticipantsWindow::loadPreview);
     mainLayout->addWidget(previewButton);
@@ -78,7 +92,7 @@ void LoadParticipantsWindow::setupUI()
     // Preview table
     previewTable = new QTableWidget();
     previewTable->setColumnCount(5);
-    QStringList headers = {"Nome", "Código da Placa", "Categoria", "Modalidade", "Status"};
+    QStringList headers = {"Name", "Plate Code", "Category", "Modality", "Status"};
     previewTable->setHorizontalHeaderLabels(headers);
     previewTable->setAlternatingRowColors(true);
     previewTable->horizontalHeader()->setStretchLastSection(true);
@@ -101,12 +115,12 @@ void LoadParticipantsWindow::setupUI()
     // Buttons
     buttonLayout = new QHBoxLayout();
     
-    importButton = new QPushButton("Importar Participantes");
+    importButton = new QPushButton("Import Participants");
     importButton->setEnabled(false);
     importButton->setStyleSheet("font-weight: bold; background-color: #4CAF50; color: white;");
     connect(importButton, &QPushButton::clicked, this, &LoadParticipantsWindow::importParticipants);
     
-    cancelButton = new QPushButton("Cancelar");
+    cancelButton = new QPushButton("Cancel");
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
     
     buttonLayout->addStretch();
@@ -144,7 +158,7 @@ void LoadParticipantsWindow::loadBasicData()
         
     } catch (const std::exception& e) {
         qDebug() << "Error loading basic data:" << e.what();
-        QMessageBox::warning(this, "Erro", "Erro ao carregar dados básicos do sistema");
+        QMessageBox::warning(this, "Error", "Error loading basic system data");
     }
 }
 
@@ -158,6 +172,8 @@ void LoadParticipantsWindow::setAvailableTrials(const QVector<Trials::TrialInfo>
     // Add placeholder
     trialCombo->addItem("Select an event...", -1);
     
+    int activeTrialIndex = -1;
+    
     // Filter trials - only present and future events
     for (const auto& trial : trials) {
         if (validateTrialForImport(trial)) {
@@ -166,16 +182,27 @@ void LoadParticipantsWindow::setAvailableTrials(const QVector<Trials::TrialInfo>
                                 .arg(trial.name)
                                 .arg(trial.scheduledDateTime.toString("dd/MM/yyyy hh:mm"));
             trialCombo->addItem(displayText, trial.id);
+            
+            // Check if this is the active trial
+            if (trial.id == activeTrialId) {
+                activeTrialIndex = trialCombo->count() - 1; // Last added item
+            }
         }
     }
     
-    if (availableTrials.isEmpty()) {
-        statusLabel->setText("Não há eventos futuros disponíveis para importação.");
+    // Auto-select the active trial if found
+    if (activeTrialIndex >= 0) {
+        trialCombo->setCurrentIndex(activeTrialIndex);
+        selectFileButton->setEnabled(true);
+        statusLabel->setText("Active event auto-selected. You can now choose the Excel file.");
+        statusLabel->setStyleSheet("color: #4CAF50;"); // Green for success
+    } else if (availableTrials.isEmpty()) {
+        statusLabel->setText("No future events available for import.");
         statusLabel->setStyleSheet("color: #f44336;");
         trialCombo->setEnabled(false);
         selectFileButton->setEnabled(false);
     } else {
-        statusLabel->setText(QString("Encontrados %1 eventos disponíveis. Selecione um evento primeiro.").arg(availableTrials.size()));
+        statusLabel->setText(QString("Found %1 available events. Please select an event first.").arg(availableTrials.size()));
         statusLabel->setStyleSheet("color: #FF9800;"); // Orange to indicate action needed
         trialCombo->setEnabled(true);
         selectFileButton->setEnabled(false); // Keep disabled until event is selected
@@ -194,22 +221,36 @@ void LoadParticipantsWindow::selectFile()
 {
     // Validate that an event is selected first
     if (trialCombo->currentData().toInt() <= 0) {
-        QMessageBox::warning(this, "Erro", "Selecione um evento antes de escolher o arquivo Excel.");
+        QMessageBox::warning(this, "Error", "Please select an event before choosing the Excel file.");
         return;
     }
     
-    QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    // Get settings file path
+    QString settingsPath = "settings.ini";
+    if (!QFile::exists(settingsPath)) {
+        settingsPath = QCoreApplication::applicationDirPath() + "/settings.ini";
+    }
+    
+    // Get last used path from settings, fallback to Documents
+    QSettings settings(settingsPath, QSettings::IniFormat);
+    QString lastPath = settings.value("LoadParticipants/LastFilePath", 
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).toString();
+    
     QString fileName = QFileDialog::getOpenFileName(
         this,
-        "Selecionar arquivo Excel",
-        documentsPath,
-        "Arquivos Excel (*.xlsx *.xls);;Todos os arquivos (*)"
+        "Select Excel file",
+        lastPath,
+        "Excel Files (*.xlsx *.xls);;All Files (*)"
     );
     
     if (!fileName.isEmpty()) {
         selectedFilePath = fileName;
         filePathEdit->setText(fileName);
-        
+
+        // Save last used path
+        QSettings saveSettings(settingsPath, QSettings::IniFormat);
+        saveSettings.setValue("LoadParticipants/LastFilePath", QFileInfo(fileName).absolutePath());
+
         // Enable preview button if trial is also selected
         previewButton->setEnabled(trialCombo->currentData().toInt() > 0);
         
@@ -250,7 +291,7 @@ void LoadParticipantsWindow::loadPreview()
                 validCount++;
             } else {
                 totalErrors++;
-                if (participant.errorMessage.contains("duplicada")) {
+                if (participant.errorMessage.contains("duplicate plate", Qt::CaseInsensitive)) {
                     duplicateCount++;
                 }
             }
@@ -258,17 +299,17 @@ void LoadParticipantsWindow::loadPreview()
         
         if (validCount > 0 && duplicateCount == 0) {
             importButton->setEnabled(true);
-            statusLabel->setText(QString("Arquivo carregado! %1 participantes válidos encontrados.")
+            statusLabel->setText(QString("File loaded! %1 valid participants found.")
                                .arg(validCount));
             statusLabel->setStyleSheet("color: #4CAF50;");
         } else if (duplicateCount > 0) {
             importButton->setEnabled(false);
-            statusLabel->setText(QString("ERRO: %1 placas duplicadas detectadas! Corrija o arquivo antes de importar.")
+            statusLabel->setText(QString("ERROR: %1 duplicate plate codes detected! Please correct the file before importing.")
                                .arg(duplicateCount));
             statusLabel->setStyleSheet("color: #f44336; font-weight: bold;");
         } else {
             importButton->setEnabled(false);
-            statusLabel->setText(QString("Nenhum participante válido encontrado. %1 erros detectados.")
+            statusLabel->setText(QString("No valid participants found. %1 errors detected.")
                                .arg(totalErrors));
             statusLabel->setStyleSheet("color: #f44336;");
         }
@@ -319,7 +360,7 @@ bool LoadParticipantsWindow::loadExcelFile(const QString& filePath)
         
     } catch (const std::exception& e) {
         qDebug() << "Error loading Excel file:" << e.what();
-        QMessageBox::warning(this, "Erro", "Erro ao processar arquivo Excel");
+        QMessageBox::warning(this, "Error", "Error processing Excel file");
         return false;
     }
 }
@@ -334,28 +375,28 @@ void LoadParticipantsWindow::validateParticipantsData()
         // Validate name
         if (participant.name.isEmpty()) {
             participant.valid = false;
-            participant.errorMessage = "Nome obrigatório";
+            participant.errorMessage = "Name is required";
             continue;
         }
         
         // Validate plate code
         if (participant.plateCode.isEmpty()) {
             participant.valid = false;
-            participant.errorMessage = "Código da placa obrigatório";
+            participant.errorMessage = "Plate code is required";
             continue;
         }
         
         // Validate category
         if (participant.category.isEmpty()) {
             participant.valid = false;
-            participant.errorMessage = "Categoria obrigatória";
+            participant.errorMessage = "Category is required";
             continue;
         }
         
         // Validate modality
         if (participant.modality.isEmpty()) {
             participant.valid = false;
-            participant.errorMessage = "Modalidade obrigatória";
+            participant.errorMessage = "Modality is required";
             continue;
         }
     }
@@ -379,11 +420,14 @@ void LoadParticipantsWindow::validateParticipantsData()
             // Mark all occurrences as invalid
             for (int index : indices) {
                 participantsData[index].valid = false;
-                participantsData[index].errorMessage = QString("Placa duplicada (%1 ocorrências)").arg(indices.size());
+                participantsData[index].errorMessage = QString("Duplicate plate (%1 occurrences)").arg(indices.size());
             }
             qDebug() << QString("Found duplicate plate code '%1' in %2 rows").arg(plateCode, QString::number(indices.size()));
         }
     }
+    
+    // Detect conflicts with existing registrations
+    detectConflicts();
 }
 
 void LoadParticipantsWindow::updatePreviewTable()
@@ -398,14 +442,14 @@ void LoadParticipantsWindow::updatePreviewTable()
         previewTable->setItem(row, 2, new QTableWidgetItem(participant.category));
         previewTable->setItem(row, 3, new QTableWidgetItem(participant.modality));
         
-        QString status = participant.valid ? "Válido" : participant.errorMessage;
+        QString status = participant.valid ? "Valid" : participant.errorMessage;
         QTableWidgetItem* statusItem = new QTableWidgetItem(status);
         
         // Color coding based on validation
         QColor rowColor;
         if (participant.valid) {
             rowColor = QColor(200, 255, 200); // Light green
-        } else if (participant.errorMessage.contains("duplicada")) {
+        } else if (participant.errorMessage.contains("duplicate plate", Qt::CaseInsensitive)) {
             rowColor = QColor(255, 150, 150); // Darker red for duplicates
         } else {
             rowColor = QColor(255, 200, 200); // Light red for other errors
@@ -454,7 +498,7 @@ void LoadParticipantsWindow::importParticipants()
     }
     
     if (trialId <= 0) {
-        QMessageBox::warning(this, "Erro", "Selecione um evento válido.");
+        QMessageBox::warning(this, "Error", "Please select a valid event.");
         return;
     }
     
@@ -506,6 +550,24 @@ void LoadParticipantsWindow::importParticipants()
             QApplication::processEvents();
             
             try {
+                // Check if this participant has a conflict resolution
+                ConflictData* conflictInfo = nullptr;
+                QString participantName = participant.name.trimmed().toLower();
+                
+                for (auto& conflict : conflictsData) {
+                    if (conflict.dbName.trimmed().toLower() == participantName) {
+                        conflictInfo = &conflict;
+                        break;
+                    }
+                }
+                
+                // If conflict exists and user chose to keep database version, skip import
+                if (conflictInfo && conflictInfo->resolved && !conflictInfo->useExcelVersion) {
+                    qDebug() << QString("[LoadParticipants] Skipping %1 - keeping database version").arg(participant.name);
+                    imported++; // Count as "imported" (no change needed)
+                    continue;
+                }
+                
                 // Get or create athlete
                 int athleteId = -1;
                 if (!createAthleteIfNotExists(participant.name, athleteId)) {
@@ -530,25 +592,56 @@ void LoadParticipantsWindow::importParticipants()
                     continue;
                 }
                 
-                // Create registration
-                qDebug() << QString("[LoadParticipants] Creating registration: trialId=%1, athleteId=%2, plateCode=%3, modalityId=%4, categoryId=%5")
-                           .arg(trialId).arg(athleteId).arg(participant.plateCode).arg(modalityId).arg(categoryId);
-                           
-                auto registrationResult = registrationsRepo.createRegistration(
-                    trialId,
-                    athleteId,
-                    participant.plateCode,
-                    modalityId,
-                    categoryId
-                );
-                
-                if (registrationResult.has_value()) {
-                    imported++;
-                    qDebug() << QString("[LoadParticipants] Successfully created registration ID %1").arg(registrationResult.value().id);
+                // Check if this is a conflict that needs updating
+                if (conflictInfo && conflictInfo->resolved && conflictInfo->useExcelVersion) {
+                    // Update existing registration
+                    qDebug() << QString("[LoadParticipants] Updating registration for %1 with Excel version").arg(participant.name);
+                    
+                    // Find existing registration by athlete and trial
+                    auto existingResult = registrationsRepo.getRegistrationsByTrial(trialId);
+                    if (existingResult.has_value()) {
+                        for (const auto& existing : existingResult.value()) {
+                            if (existing.athleteId == athleteId) {
+                                // Create updated registration object
+                                Registrations::Registration updatedReg = existing;
+                                updatedReg.plateCode = participant.plateCode;
+                                updatedReg.modalityId = modalityId;
+                                updatedReg.categoryId = categoryId;
+                                
+                                // Update the registration
+                                auto updateResult = registrationsRepo.updateRegistrationById(existing.id, updatedReg);
+                                
+                                if (updateResult.has_value()) {
+                                    imported++;
+                                    qDebug() << QString("[LoadParticipants] Successfully updated registration ID %1").arg(existing.id);
+                                } else {
+                                    qDebug() << "[LoadParticipants] Error updating registration:" << updateResult.error();
+                                    errors++;
+                                }
+                                break;
+                            }
+                        }
+                    }
                 } else {
-                    qDebug() << "[LoadParticipants] Error creating registration:" << registrationResult.error();
-
-                    errors++;
+                    // Create new registration (no conflict or new participant)
+                    qDebug() << QString("[LoadParticipants] Creating new registration: trialId=%1, athleteId=%2, plateCode=%3, modalityId=%4, categoryId=%5")
+                               .arg(trialId).arg(athleteId).arg(participant.plateCode).arg(modalityId).arg(categoryId);
+                               
+                    auto registrationResult = registrationsRepo.createRegistration(
+                        trialId,
+                        athleteId,
+                        participant.plateCode,
+                        modalityId,
+                        categoryId
+                    );
+                    
+                    if (registrationResult.has_value()) {
+                        imported++;
+                        qDebug() << QString("[LoadParticipants] Successfully created registration ID %1").arg(registrationResult.value().id);
+                    } else {
+                        qDebug() << "[LoadParticipants] Error creating registration:" << registrationResult.error();
+                        errors++;
+                    }
                 }
                 
             } catch (const std::exception& e) {
@@ -696,10 +789,10 @@ void LoadParticipantsWindow::onTrialSelected()
     participantsData.clear();
     
     if (eventSelected) {
-        statusLabel->setText("Evento selecionado. Selecione um arquivo Excel para continuar.");
+        statusLabel->setText("Event selected. Please select an Excel file to continue.");
         statusLabel->setStyleSheet("color: #2196F3;");
     } else {
-        statusLabel->setText("Selecione um evento primeiro.");
+        statusLabel->setText("Please select an event first.");
         statusLabel->setStyleSheet("color: #f44336;");
         
         // Clear file selection when no event is selected
@@ -730,4 +823,267 @@ void LoadParticipantsWindow::setControlsEnabled(bool enabled)
     
     previewButton->setEnabled(enabled && trialCombo->currentData().toInt() > 0 && !selectedFilePath.isEmpty());
     importButton->setEnabled(enabled && importButton->isEnabled());
+}
+
+void LoadParticipantsWindow::setActiveTrialId(int activeTrialId)
+{
+    this->activeTrialId = activeTrialId;
+}
+
+void LoadParticipantsWindow::detectConflicts()
+{
+    conflictsData.clear();
+    
+    if (selectedTrialId <= 0) {
+        return;
+    }
+    
+    try {
+        // Get existing registrations for this trial
+        Registrations::Repository registrationsRepo(m_dbManager.database());
+        auto existingResult = registrationsRepo.getRegistrationsByTrial(selectedTrialId);
+        
+        if (!existingResult.has_value()) {
+            return; // No existing registrations, no conflicts
+        }
+        
+        auto existingRegistrations = existingResult.value();
+        
+        // Create map of existing participants by name (case insensitive)
+        QMap<QString, Registrations::Registration> existingMap;
+        for (const auto& reg : existingRegistrations) {
+            // Get athlete name
+            Athletes::Repository athletesRepo(m_dbManager.database());
+            auto athleteResult = athletesRepo.getAthleteById(reg.athleteId);
+            if (athleteResult.has_value()) {
+                QString athleteName = athleteResult.value().name.trimmed().toLower();
+                existingMap[athleteName] = reg;
+            }
+        }
+        
+        // Check each participant from Excel for conflicts
+        for (const auto& participant : participantsData) {
+            if (!participant.valid) continue;
+            
+            QString participantName = participant.name.trimmed().toLower();
+            
+            if (existingMap.contains(participantName)) {
+                // Found conflict - get existing data
+                auto existingReg = existingMap[participantName];
+                
+                // Get existing category and modality names
+                QString existingCategory, existingModality;
+                
+                Categories::Repository categoriesRepo(m_dbManager.database());
+                auto catResult = categoriesRepo.getCategoryById(existingReg.categoryId);
+                if (catResult.has_value()) {
+                    existingCategory = catResult.value().name;
+                }
+                
+                Modalities::Repository modalitiesRepo(m_dbManager.database());
+                auto modResult = modalitiesRepo.getModalityById(existingReg.modalityId);
+                if (modResult.has_value()) {
+                    existingModality = modResult.value().name;
+                }
+                
+                // Check if there are actual differences
+                bool hasDifferences = (
+                    existingReg.plateCode.trimmed().toLower() != participant.plateCode.trimmed().toLower() ||
+                    existingCategory.trimmed().toLower() != participant.category.trimmed().toLower() ||
+                    existingModality.trimmed().toLower() != participant.modality.trimmed().toLower()
+                );
+                
+                if (hasDifferences) {
+                    ConflictData conflict;
+                    conflict.plateCode = participant.plateCode;
+                    
+                    // Database version
+                    conflict.dbName = participant.name; // Same name
+                    conflict.dbCategory = existingCategory;
+                    conflict.dbModality = existingModality;
+                    
+                    // Excel version
+                    conflict.excelName = participant.name;
+                    conflict.excelCategory = participant.category;
+                    conflict.excelModality = participant.modality;
+                    
+                    conflict.useExcelVersion = true; // Default to Excel version
+                    conflict.resolved = false;
+                    
+                    conflictsData.append(conflict);
+                }
+            }
+        }
+        
+        // If conflicts found, show conflicts dialog
+        if (!conflictsData.isEmpty()) {
+            showConflictsDialog();
+        }
+        
+    } catch (const std::exception& e) {
+        qDebug() << "Error detecting conflicts:" << e.what();
+    }
+}
+
+void LoadParticipantsWindow::showConflictsDialog()
+{
+    if (conflictsData.isEmpty()) {
+        return;
+    }
+    
+    QDialog conflictDialog(this);
+    conflictDialog.setWindowTitle("Resolve Registration Conflicts");
+    conflictDialog.setModal(true);
+    conflictDialog.resize(800, 400);
+    
+    QVBoxLayout* layout = new QVBoxLayout(&conflictDialog);
+    
+    QLabel* headerLabel = new QLabel(QString("Found %1 participants that already exist with different data.\nChoose which version to keep:").arg(conflictsData.size()));
+    headerLabel->setWordWrap(true);
+    headerLabel->setStyleSheet("font-weight: bold; color: #FF9800; margin-bottom: 10px;");
+    layout->addWidget(headerLabel);
+    
+    // Create table for conflicts
+    QTableWidget* conflictTable = new QTableWidget();
+    conflictTable->setColumnCount(6);
+    QStringList headers = {"Name", "Database Version", "Excel Version", "Choose", "", ""};
+    conflictTable->setHorizontalHeaderLabels(headers);
+    conflictTable->setRowCount(conflictsData.size());
+    
+    for (int row = 0; row < conflictsData.size(); ++row) {
+        const auto& conflict = conflictsData[row];
+        
+        // Name
+        conflictTable->setItem(row, 0, new QTableWidgetItem(conflict.dbName));
+        
+        // Database version
+        QString dbVersion = QString("Plate: %1\nCategory: %2\nModality: %3")
+            .arg(conflict.plateCode, conflict.dbCategory, conflict.dbModality);
+        QTableWidgetItem* dbItem = new QTableWidgetItem(dbVersion);
+        dbItem->setBackground(QColor(255, 235, 235)); // Light red
+        conflictTable->setItem(row, 1, dbItem);
+        
+        // Excel version  
+        QString excelVersion = QString("Plate: %1\nCategory: %2\nModality: %3")
+            .arg(conflict.plateCode, conflict.excelCategory, conflict.excelModality);
+        QTableWidgetItem* excelItem = new QTableWidgetItem(excelVersion);
+        excelItem->setBackground(QColor(235, 255, 235)); // Light green
+        conflictTable->setItem(row, 2, excelItem);
+        
+        // Radio buttons for choice
+        QWidget* choiceWidget = new QWidget();
+        QHBoxLayout* choiceLayout = new QHBoxLayout(choiceWidget);
+        
+        QRadioButton* keepDbRadio = new QRadioButton("Keep Database");
+        QRadioButton* keepExcelRadio = new QRadioButton("Keep Excel");
+        keepExcelRadio->setChecked(true); // Default to Excel
+        
+        choiceLayout->addWidget(keepDbRadio);
+        choiceLayout->addWidget(keepExcelRadio);
+        choiceWidget->setLayout(choiceLayout);
+        
+        conflictTable->setCellWidget(row, 3, choiceWidget);
+        
+        // Store radio buttons for later access
+        conflictTable->setProperty(QString("dbRadio_%1").arg(row).toLatin1(), QVariant::fromValue(keepDbRadio));
+        conflictTable->setProperty(QString("excelRadio_%1").arg(row).toLatin1(), QVariant::fromValue(keepExcelRadio));
+    }
+    
+    conflictTable->resizeRowsToContents();
+    conflictTable->resizeColumnsToContents();
+    layout->addWidget(conflictTable);
+    
+    // Buttons
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    QPushButton* resolveButton = new QPushButton("Apply Changes");
+    QPushButton* cancelButton = new QPushButton("Cancel Import");
+    
+    resolveButton->setStyleSheet("font-weight: bold; background-color: #4CAF50; color: white;");
+    
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(resolveButton);
+    buttonLayout->addWidget(cancelButton);
+    
+    layout->addLayout(buttonLayout);
+    
+    // Connect buttons
+    connect(resolveButton, &QPushButton::clicked, [&conflictDialog, conflictTable, this]() {
+        // Read choices and update conflictsData
+        for (int row = 0; row < conflictsData.size(); ++row) {
+            QRadioButton* excelRadio = conflictTable->property(QString("excelRadio_%1").arg(row).toLatin1()).value<QRadioButton*>();
+            if (excelRadio) {
+                conflictsData[row].useExcelVersion = excelRadio->isChecked();
+                conflictsData[row].resolved = true;
+            }
+        }
+        conflictDialog.accept();
+    });
+    
+    connect(cancelButton, &QPushButton::clicked, &conflictDialog, &QDialog::reject);
+    
+    // Show dialog and update preview if accepted
+    if (conflictDialog.exec() == QDialog::Accepted) {
+        updatePreviewTableWithConflicts();
+    } else {
+        // User cancelled - don't proceed with import
+        statusLabel->setText("Import cancelled due to unresolved conflicts.");
+        statusLabel->setStyleSheet("color: #f44336;");
+        importButton->setEnabled(false);
+    }
+}
+
+void LoadParticipantsWindow::updatePreviewTableWithConflicts()
+{
+    updatePreviewTable();
+    
+    if (conflictsData.isEmpty()) {
+        return;
+    }
+    
+    // Highlight conflicts in the preview table
+    for (int row = 0; row < previewTable->rowCount(); ++row) {
+        QTableWidgetItem* nameItem = previewTable->item(row, 0);
+        if (!nameItem) continue;
+        
+        QString participantName = nameItem->text().trimmed().toLower();
+        
+        // Check if this participant has a conflict
+        for (const auto& conflict : conflictsData) {
+            if (conflict.dbName.trimmed().toLower() == participantName) {
+                // Highlight the row in yellow to indicate conflict resolution
+                for (int col = 0; col < previewTable->columnCount(); ++col) {
+                    QTableWidgetItem* item = previewTable->item(row, col);
+                    if (item) {
+                        item->setBackground(QColor(255, 255, 0, 100)); // Light yellow
+                    }
+                }
+                
+                // Update status
+                QTableWidgetItem* statusItem = previewTable->item(row, 4);
+                if (statusItem) {
+                    if (conflict.resolved) {
+                        statusItem->setText(conflict.useExcelVersion ? "Excel Version" : "Database Version");
+                        statusItem->setBackground(conflict.useExcelVersion ? 
+                            QColor(235, 255, 235) : QColor(255, 235, 235));
+                    } else {
+                        statusItem->setText("Conflict - Needs Resolution");
+                        statusItem->setBackground(QColor(255, 255, 0));
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    // Update status message
+    int resolvedConflicts = 0;
+    for (const auto& conflict : conflictsData) {
+        if (conflict.resolved) resolvedConflicts++;
+    }
+    
+    statusLabel->setText(QString("Conflicts resolved: %1/%2. Ready to import.")
+        .arg(resolvedConflicts).arg(conflictsData.size()));
+    statusLabel->setStyleSheet("color: #4CAF50;");
+    
+    importButton->setEnabled(resolvedConflicts == conflictsData.size());
 }

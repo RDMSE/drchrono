@@ -16,6 +16,7 @@
 #include <QHeaderView>
 #include <QStandardPaths>
 #include <QMap>
+#include <QSettings>
 #include "dbmanager.h"
 #include "model/trialinfo.h"
 #include "model/registration.h"
@@ -36,6 +37,21 @@ struct ParticipantData {
     QString errorMessage = "";
 };
 
+struct ConflictData {
+    QString plateCode;
+    // Database version
+    QString dbName;
+    QString dbCategory;
+    QString dbModality;
+    // Excel version  
+    QString excelName;
+    QString excelCategory;
+    QString excelModality;
+    // Resolution (true = keep Excel, false = keep DB)
+    bool useExcelVersion = true;
+    bool resolved = false;
+};
+
 class LoadParticipantsWindow : public QDialog
 {
     Q_OBJECT
@@ -45,6 +61,7 @@ public:
     ~LoadParticipantsWindow();
 
     void setAvailableTrials(const QVector<Trials::TrialInfo>& trials);
+    void setActiveTrialId(int activeTrialId);
 
 private slots:
     void selectFile();
@@ -75,11 +92,13 @@ private:
     // Data
     QVector<Trials::TrialInfo> availableTrials;
     QVector<ParticipantData> participantsData;
+    QVector<ConflictData> conflictsData;
     QVector<Athletes::Athlete> athletes;
     QVector<Categories::Category> categories;
     QVector<Modalities::Modality> modalities;
     QString selectedFilePath;
     int selectedTrialId;
+    int activeTrialId;
     
     // Methods
     void setupUI();
@@ -93,6 +112,9 @@ private:
     int findOrCreateModality(const QString& modalityName);
     void resetForm();
     void setControlsEnabled(bool enabled);
+    void detectConflicts();
+    void showConflictsDialog();
+    void updatePreviewTableWithConflicts();
 };
 
 #endif // LOADPARTICIPANTSWINDOW_H

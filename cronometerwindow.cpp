@@ -855,6 +855,12 @@ void CronometerWindow::on_actionLoad_from_file_triggered()
         }
         
         LoadParticipantsWindow loadDialog(chronoDb, this);
+        
+        // Set active trial ID if there's one selected
+        if (currentTrialId > 0) {
+            loadDialog.setActiveTrialId(currentTrialId);
+        }
+        
         loadDialog.setAvailableTrials(trialsResult.value());
         
         if (loadDialog.exec() == QDialog::Accepted) {

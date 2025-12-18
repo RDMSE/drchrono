@@ -2,6 +2,8 @@
 setlocal ENABLEDELAYEDEXPANSION
 title Deploy Qt 6.x MinGW (Auto-detect EXE)
 
+' "C:\Qt\6.10.1\mingw_64\bin\windeployqt.exe" --dir dist dist\crono.exe
+
 REM ======================================================
 REM CONFIGURACAO
 REM ======================================================
