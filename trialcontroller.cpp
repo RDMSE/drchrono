@@ -298,13 +298,16 @@ bool TrialController::stopTrial() {
 QVector<GroupInfo> TrialController::loadGroupsFromXlsx(const QString& xlsxPath) {
     QXlsx::Document xlsx(xlsxPath);
     
-    if (!xlsx.load()) {
-        qWarning() << "[XLSX] Failed to load file:" << xlsxPath;
+    // When constructed with a path, Document automatically loads the file
+    // Check if the document was loaded successfully by checking if we can read from it
+    QVariant testRead = xlsx.read(1, 1);
+    if (testRead.isNull()) {
+        qWarning() << "[XLSX] Failed to load or read file:" << xlsxPath;
         return {};
     }
 
     // Read trial name from first sheet, cell A1 (assuming format: "Trial: <name>")
-    QString trialCell = xlsx.read(1, 1).toString().trimmed();
+    QString trialCell = testRead.toString().trimmed();
     QString trialName;
     
     if (trialCell.startsWith("Trial:", Qt::CaseInsensitive)) {
