@@ -1,13 +1,13 @@
 #include "report.h"
-#include <QXlsx/header/xlsxdocument.h>
+#include "xlsxdocument.h"
 #include <QSqlQuery>
 #include <QString>
 #include <QSqlError>
+#include <QColor>
 #include <algorithm>
+#include "utils/timeutils.h"
 
 bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabase db) {
-
-    if (trialId == -1) return false;
 
     const QString timeFormat = "hh:MM:ss";
 
@@ -31,10 +31,12 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
     QSqlQuery groupQuery(db);
 
     QString sql = R"(
-        SELECT DISTINCT groupName
-        FROM events
-        WHERE trialId = :trialId
-        ORDER BY groupName
+        SELECT DISTINCT c.name as groupName
+        FROM results r
+        INNER JOIN registrations reg ON r.registrationId = reg.id
+        INNER JOIN categories c ON reg.categoryId = c.id
+        WHERE reg.trialId = :trialId
+        ORDER BY c.name
     )";
 
     groupQuery.prepare(sql);
@@ -70,20 +72,20 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
 
         QSqlQuery evQuery(db);
         sql = R"(
-            SELECT e1.placa, e1.startTime, e1.endTime, e1.durationMs as duration, e1.notes
-            FROM events e1
-            INNER JOIN (
-                SELECT placa, MAX(endTime) AS lastEnd
-                FROM events
-                WHERE 1 = 1
-                    AND trialId = :trialId
-                    AND groupName = :grp
-                GROUP BY placa
-            ) e2 ON e1.placa = e2.placa AND e1.endTime = e2.lastEnd
-            WHERE 1 = 1
-                AND e1.trialId = :trialId
-                AND e1.groupName = :grp
-            ORDER BY e1.durationMs
+            SELECT r1.plateCode, r1.startTime, r1.endTime, r1.durationMs as duration, r1.notes
+            FROM (
+                SELECT reg.plateCode, r.startTime, r.endTime, r.durationMs, r.notes,
+                       ROW_NUMBER() OVER (PARTITION BY reg.plateCode ORDER BY r.endTime DESC) as rn
+                FROM results r
+                INNER JOIN registrations reg ON r.registrationId = reg.id
+                INNER JOIN athletes a ON reg.athleteId = a.id
+                INNER JOIN categories c ON reg.categoryId = c.id
+                INNER JOIN modalities m ON reg.modalityId = m.id
+                WHERE reg.trialId = :trialId
+                    AND c.name = :grp
+            ) r1
+            WHERE r1.rn = 1
+            ORDER BY r1.durationMs
         )";
 
         evQuery.prepare(sql);
@@ -106,7 +108,7 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
                 evQuery.value(0).toString(),
                 evQuery.value(1).toString(),
                 evQuery.value(2).toString(),
-                Report::msToHHMMSS(evQuery.value(3).toInt()),
+                Utils::TimeFormatter::formatTimeShort(evQuery.value(3).toInt()),
                 evQuery.value(4).toString()
             };
 

@@ -2,3 +2,6 @@
 	path = third_party/QXlsx
 	url = https://github.com/QtExcel/QXlsx.git
 	branch = master
+[submodule "third_party/expected"]
+	path = third_party/expected
+	url = https://github.com/TartanLlama/expected.git

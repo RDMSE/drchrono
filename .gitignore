@@ -1,5 +1,4 @@
-# Prerequisites
-*.d
+# Qt/C++ Project .gitignore
 
 # Compiled Object files
 *.slo
@@ -10,12 +9,6 @@
 # Precompiled Headers
 *.gch
 *.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
 
 # Compiled Dynamic libraries
 *.so
@@ -36,13 +29,76 @@
 *.exe
 *.out
 *.app
+crono
+
+# Qt generated files
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
+*_automoc.cpp
+*_autogen/
+
+# Qt Makefile
+Makefile*
+*.pro.user*
+*.qmake.stash
+
+# Qt Creator files
+*.pro.user
+*.pro.user.*
+.qtcreator/
+.qtc_clangd/
+*.autosave
+
+# Build directories
+build/
+build_*/
+bin/
+dist/
+debug/
+release/
+Debug/
+Release/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Log files
+*.log
+
+# IDE files
+.vscode/
+.vs/
+*.suo
+*.vcxproj.user
+
+# Mac files
+.DS_Store
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Prerequisites
+*.d
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
 
 # debug information files
 *.dwo
-
-# build directories
-build/
-bin/
-dist/
-
-*.zip

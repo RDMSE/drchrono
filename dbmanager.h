@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QSqlDatabase>
+#include <tl/expected.hpp>
 
 class DBManager
 {
@@ -12,13 +13,17 @@ public:
 
     bool isOpen() const;
 
+    bool open();
+
+    inline QSqlDatabase database() const {
+        return QSqlDatabase::database();
+    }
+
 private:
-    static QSqlDatabase m_db;
+    QSqlDatabase m_db;
 
     void init();
-    bool createTrialsTable();
-    bool createGroupsTable();
-    bool createEventsTable();
+    bool isValid() const;
 };
 
 #endif // DBMANAGER_H
