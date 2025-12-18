@@ -33,8 +33,8 @@ for idx, group in enumerate(groups, start=3):
 # Adjust column width
 ws.column_dimensions['A'].width = 20
 
-# Save file
-output_path = "/home/runner/work/drchrono/drchrono/groups.xlsx"
+# Save file - use relative path for portability
+output_path = "groups.xlsx"
 wb.save(output_path)
 print(f"Sample XLSX file created: {output_path}")
 print(f"Trial: DR EXTREMO 2025")

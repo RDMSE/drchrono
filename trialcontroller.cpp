@@ -361,4 +361,3 @@ QVector<GroupInfo> TrialController::loadGroupsFromXlsx(const QString& xlsxPath) 
     return savedGroups.value();
 }
 
-}
