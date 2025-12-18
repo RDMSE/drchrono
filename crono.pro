@@ -6,7 +6,7 @@ CONFIG += c++20
 
 DEFINES += NOMINMAX
 
-VERSION = 0.1.0.0
+VERSION = 0.2.0.0
 
 # Application icon
 RC_ICONS = dr.ico
@@ -18,26 +18,57 @@ include(third_party/QXlsx/QXlsx/QXlsx.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH += \
-    $$PWD/third_party/QXlsx/QXlsx
+    $$PWD/third_party/expected/include \
+    $$PWD/third_party/QXlsx/QXlsx \
+    $$PWD/model
+
 
 SOURCES += \
     dbmanager.cpp \
-    excelutils.cpp \
+    loadparticipantswindow.cpp \
+    participantswindow.cpp \
+    utils/excelutils.cpp \
+    utils/timeutils.cpp \
     main.cpp \
     cronometerwindow.cpp \
+    neweventwindow.cpp \
     report.cpp \
-    trialcontroller.cpp
+    repository/athletes/athletesrepository.cpp \
+    repository/categories/categoriesrepository.cpp \
+    repository/modalities/modalitiesrepository.cpp \
+    repository/trials/trialsrepository.cpp \
+    repository/registrations/registrationsrepository.cpp \
+    repository/results/resultsrepository.cpp \
+    aggregates/trialaggregate.cpp \
+    aggregates/eventaggregate.cpp
 
 HEADERS += \
     cronometerwindow.h \
     dbmanager.h \
-    excelutils.h \
+    loadparticipantswindow.h \
+    participantswindow.h \
+    utils/excelutils.h \
+    utils/timeutils.h \
+    neweventwindow.h \
     report.h \
-    trialcontroller.h
+    model/modality.h \
+    model/athlete.h \
+    model/category.h \
+    model/trialinfo.h \
+    model/registration.h \
+    model/result.h \
+    repository/athletes/athletesrepository.h \
+    repository/modalities/modalitiesrepository.h \
+    repository/categories/categoriesrepository.h \
+    repository/trials/trialsrepository.h \
+    repository/registrations/registrationsrepository.h \
+    repository/results/resultsrepository.h \
+    aggregates/trialaggregate.h \
+    aggregates/eventaggregate.h
 
 FORMS += \
-    addNewEvent.ui \
-    cronometerwindow.ui
+    cronometerwindow.ui \
+    neweventwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
