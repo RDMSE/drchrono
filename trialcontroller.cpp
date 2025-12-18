@@ -3,6 +3,8 @@
 #include <QSqlError>
 #include <QSettings>
 #include <QDateTime>
+#include <QXlsx/header/xlsxdocument.h>
+#include <QDebug>
 
 TrialController::TrialController(const QSqlDatabase& db): m_db(db) { }
 
@@ -291,4 +293,72 @@ bool TrialController::stopTrial() {
     }
 
     return true;
+}
+
+QVector<GroupInfo> TrialController::loadGroupsFromXlsx(const QString& xlsxPath) {
+    QXlsx::Document xlsx(xlsxPath);
+    
+    if (!xlsx.load()) {
+        qWarning() << "[XLSX] Failed to load file:" << xlsxPath;
+        return {};
+    }
+
+    // Read trial name from first sheet, cell A1 (assuming format: "Trial: <name>")
+    QString trialCell = xlsx.read(1, 1).toString().trimmed();
+    QString trialName;
+    
+    if (trialCell.startsWith("Trial:", Qt::CaseInsensitive)) {
+        trialName = trialCell.mid(6).trimmed(); // Remove "Trial:" prefix
+    } else {
+        qWarning() << "[XLSX] Trial name not found in expected format (A1 should be 'Trial: <name>')";
+        return {};
+    }
+
+    // Create or load the trial
+    createOrLoadTrial(trialName);
+    
+    // Get existing groups to avoid duplicates
+    auto existingGroups = getTrialGroups();
+    QSet<QString> existingGroupNames;
+    if (existingGroups.has_value()) {
+        for (const auto& g: existingGroups.value()) {
+            existingGroupNames.insert(g.name);
+        }
+    }
+
+    // Read groups starting from row 3 (assuming row 2 is header "Groups")
+    // Expected format:
+    // A1: Trial: <trial_name>
+    // A2: Groups
+    // A3: Group1
+    // A4: Group2
+    // ...
+    
+    int row = 3;
+    QVector<QString> newGroups;
+    
+    while (true) {
+        QVariant cellValue = xlsx.read(row, 1);
+        if (cellValue.isNull() || cellValue.toString().trimmed().isEmpty()) {
+            break; // Stop when we hit an empty cell
+        }
+        
+        QString groupName = cellValue.toString().trimmed();
+        if (!groupName.isEmpty() && !existingGroupNames.contains(groupName)) {
+            addGroup(groupName);
+            newGroups.append(groupName);
+        }
+        row++;
+    }
+
+    qDebug() << "[XLSX] Loaded" << newGroups.size() << "new groups from" << xlsxPath;
+
+    // Return all groups for this trial
+    auto savedGroups = getTrialGroups();
+    if (!savedGroups.has_value())
+        return {};
+
+    return savedGroups.value();
+}
+
 }

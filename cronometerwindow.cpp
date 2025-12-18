@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <algorithm>
 #include <QMessageBox>
+#include <QFile>
 #include "report.h"
 
 
@@ -36,7 +37,18 @@ CronometerWindow::CronometerWindow(QWidget *parent)
         setControlsStatus(started);
         startCounterTimer();
     } else {
-        auto groupsInfo = controller->loadGroupsFromConfiguration("settings.ini");
+        // Try to load groups from XLSX file first, fall back to settings.ini
+        QVector<GroupInfo> groupsInfo;
+        
+        const QString xlsxPath = "groups.xlsx";
+        if (QFile::exists(xlsxPath)) {
+            qDebug() << "[Config] Loading groups from" << xlsxPath;
+            groupsInfo = controller->loadGroupsFromXlsx(xlsxPath);
+        } else {
+            qDebug() << "[Config] XLSX not found, loading from settings.ini";
+            groupsInfo = controller->loadGroupsFromConfiguration("settings.ini");
+        }
+        
         QStringList groupNames;
         std::transform( groupsInfo.begin(), 
                         groupsInfo.end(), 

@@ -45,6 +45,7 @@ public:
 
     QVector<GroupInfo> loadGroupsFromConfiguration(const QString& configPath);
     QString loadTrialNameFromConfiguration(const QString& configPath);
+    QVector<GroupInfo> loadGroupsFromXlsx(const QString& xlsxPath);
 
     std::optional<QVector<GroupInfo>> getTrialGroups();
 
