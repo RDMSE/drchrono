@@ -31,12 +31,13 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
     QSqlQuery groupQuery(db);
 
     QString sql = R"(
-        SELECT DISTINCT c.name as groupName
+        SELECT DISTINCT (m.name || ' - ' || c.name) as groupName, c.name as categoryName, m.name as modalityName
         FROM results r
         INNER JOIN registrations reg ON r.registrationId = reg.id
         INNER JOIN categories c ON reg.categoryId = c.id
+        INNER JOIN modalities m ON reg.modalityId = m.id
         WHERE reg.trialId = :trialId
-        ORDER BY c.name
+        ORDER BY m.name, c.name
     )";
 
     groupQuery.prepare(sql);
@@ -70,6 +71,9 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
         //freeze first line
         // xlsx.currentWorksheet()->freezePanes(2,1); // Método não disponível nesta versão da QXlsx
 
+        QString categoryName = groupQuery.value(1).toString();
+        QString modalityName = groupQuery.value(2).toString();
+        
         QSqlQuery evQuery(db);
         sql = R"(
             SELECT r1.plateCode, r1.startTime, r1.endTime, r1.durationMs as duration, r1.notes
@@ -82,7 +86,8 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
                 INNER JOIN categories c ON reg.categoryId = c.id
                 INNER JOIN modalities m ON reg.modalityId = m.id
                 WHERE reg.trialId = :trialId
-                    AND c.name = :grp
+                    AND c.name = :categoryName
+                    AND m.name = :modalityName
             ) r1
             WHERE r1.rn = 1
             ORDER BY r1.durationMs
@@ -90,7 +95,8 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
 
         evQuery.prepare(sql);
         evQuery.bindValue(":trialId", trialId);
-        evQuery.bindValue(":grp", groupName);
+        evQuery.bindValue(":categoryName", categoryName);
+        evQuery.bindValue(":modalityName", modalityName);
 
         if (!evQuery.exec()) {
             qWarning() << "Erro getting events:" << evQuery.lastError().text();

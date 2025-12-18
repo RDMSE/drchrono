@@ -302,10 +302,7 @@ void CronometerWindow::on_btnRegister_clicked() {
         return;
     }
     
-    // If at least one result was registered, generate report
-    if (registered > 0) {
-        generateReport();
-    }
+    // Results registered successfully (no automatic report generation)
 }
 
 void CronometerWindow::generateReport() {
@@ -340,34 +337,8 @@ void CronometerWindow::on_actionGenerate_Excel_triggered() {
         return;
     }
     
-    // Check if the event has already ended
-    try {
-        Trials::Repository trialsRepo(chronoDb.database());
-        auto trialResult = trialsRepo.getTrialById(currentTrialId);
-        
-        if (!trialResult.has_value()) {
-            QMessageBox::warning(this, "Error", "Unable to load event information.");
-            return;
-        }
-        
-        const auto& trial = trialResult.value();
-        
-        // Check if the event has endDateTime set (event has ended)
-        if (!trial.endDateTime.isValid() || trial.endDateTime == Utils::DateTimeUtils::epochZero()) {
-            QMessageBox::warning(this, "Event Not Finished", 
-                "The Excel report can only be generated for events that have already finished.\n\n"
-                "Complete the event before generating the report.");
-            return;
-        }
-        
-        generateReport();
-        
-    } catch (const std::exception& e) {
-        QMessageBox::critical(this, "Error", 
-            QString("Error checking event status: %1").arg(e.what()));
-    } catch (...) {
-        QMessageBox::critical(this, "Error", "Unknown error checking event status.");
-    }
+    // Generate report for the selected event
+    generateReport();
 }
 
 
@@ -1086,13 +1057,9 @@ void CronometerWindow::updateMenusState() {
         generateExcelAction->setEnabled(canGenerate);
         
         if (!canGenerate) {
-            if (currentTrialId <= 0) {
-                generateExcelAction->setToolTip("Select an event to generate report");
-            } else {
-                generateExcelAction->setToolTip("Report can only be generated after the event is finished");
-            }
+            generateExcelAction->setToolTip("Select an event to generate report");
         } else {
-            generateExcelAction->setToolTip("Generate Excel report for the finished event");
+            generateExcelAction->setToolTip("Generate Excel report for the selected event");
         }
     }
 }
@@ -1134,24 +1101,6 @@ void CronometerWindow::updateStartButtonState() {
 }
 
 bool CronometerWindow::canGenerateReport() const {
-    if (currentTrialId <= 0) {
-        return false;
-    }
-    
-    try {
-        Trials::Repository trialsRepo(chronoDb.database());
-        auto trialResult = trialsRepo.getTrialById(currentTrialId);
-        
-        if (!trialResult.has_value()) {
-            return false;
-        }
-        
-        const auto& trial = trialResult.value();
-        
-        // Check if the event has endDateTime defined (event has finished)
-        return trial.endDateTime.isValid() && trial.endDateTime != Utils::DateTimeUtils::epochZero();
-        
-    } catch (...) {
-        return false;
-    }
+    // Allow report generation for any selected event
+    return currentTrialId > 0;
 }

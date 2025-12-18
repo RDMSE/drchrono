@@ -59,7 +59,9 @@ private:
     void loadBasicData();
     void createCategoryTabs();
     void populateTable(QTableWidget* table, const QVector<Registrations::Registration>& categoryRegistrations);
+    void populateCombinationTable(QTableWidget* table, const QVector<Registrations::Registration>& combinationRegistrations);
     QVector<Registrations::Registration> getRegistrationsByCategory(int categoryId);
+    QVector<Registrations::Registration> getRegistrationsByCategoryAndModality(int categoryId, int modalityId);
     QString getAthleteName(int athleteId);
     QString getModalityName(int modalityId);
     QString getCategoryName(int categoryId);
