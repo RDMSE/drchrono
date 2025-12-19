@@ -41,6 +41,15 @@ private slots:
 private:
     Ui::ParticipantsWindow *ui;
     DBManager& m_dbManager;
+
+    // TODO: Refactor header management
+    // Header field indices for easier access: read it from the settings ini file. Entry point: PartitipantsWindowFieldsMapping
+    struct {
+        QString modality;
+        QString plateCode;
+        QString athleteName;
+    } headerFields;
+
     const QStringList headers = {
         "Modalidade", 
         "Código da Placa", 
