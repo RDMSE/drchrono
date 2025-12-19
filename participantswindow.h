@@ -18,6 +18,7 @@
 #include "model/athlete.h"
 #include "model/category.h"
 #include "model/modality.h"
+#include <QStringList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ParticipantsWindow; }
@@ -40,6 +41,15 @@ private slots:
 private:
     Ui::ParticipantsWindow *ui;
     DBManager& m_dbManager;
+    const QStringList headers = {
+        "Modalidade", 
+        "Código da Placa", 
+        "Nome do Atleta"
+    };
+
+    int getHeaderIndex(const QString& headerName) const {
+        return headers.indexOf(headerName);
+    }
     
     // UI Components
     QTabWidget* tabWidget;

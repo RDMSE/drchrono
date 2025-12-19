@@ -122,77 +122,57 @@ void ParticipantsWindow::loadParticipants()
 
 void ParticipantsWindow::createCategoryTabs()
 {
-    qDebug() << "[ParticipantsWindow] Creating modality-category tabs...";
+    qDebug() << "[ParticipantsWindow] Creating category tabs...";
     // Clear existing tabs
     tabWidget->clear();
     
-    if (categories.isEmpty() || modalities.isEmpty()) {
-        qDebug() << "[ParticipantsWindow] No modalities or categories found, showing 'no data' tab";
-        QLabel* noDataLabel = new QLabel("No modalities or categories found");
+    if (categories.isEmpty()) {
+        qDebug() << "[ParticipantsWindow] No categories found, showing 'no data' tab";
+        QLabel* noDataLabel = new QLabel("No categories found");
         noDataLabel->setAlignment(Qt::AlignCenter);
         tabWidget->addTab(noDataLabel, "No data");
         return;
     }
     
-    qDebug() << "[ParticipantsWindow] Processing" << modalities.size() << "modalities and" << categories.size() << "categories";
+    qDebug() << "[ParticipantsWindow] Processing" << categories.size() << "categories";
     
-    // Collect all modality-category combinations with registrations
-    struct TabInfo {
-        QString modalityName;
-        QString categoryName;
-        QVector<Registrations::Registration> registrations;
-    };
-    
-    QVector<TabInfo> tabsToCreate;
-    
-    for (const auto& modality : modalities) {
-        for (const auto& category : categories) {
-            auto combinationRegistrations = getRegistrationsByCategoryAndModality(category.id, modality.id);
-            
-            if (!combinationRegistrations.isEmpty()) {
-                TabInfo tabInfo;
-                tabInfo.modalityName = modality.name;
-                tabInfo.categoryName = category.name;
-                tabInfo.registrations = combinationRegistrations;
-                tabsToCreate.append(tabInfo);
-            }
-        }
-    }
-    
-    // Sort tabs by modality first, then by category
-    std::sort(tabsToCreate.begin(), tabsToCreate.end(), [](const TabInfo& a, const TabInfo& b) {
-        if (a.modalityName != b.modalityName) {
-            return a.modalityName < b.modalityName;
-        }
-        return a.categoryName < b.categoryName;
+    // Sort categories alphabetically
+    auto sortedCategories = categories;
+    std::sort(sortedCategories.begin(), sortedCategories.end(), [](const Categories::Category& a, const Categories::Category& b) {
+        return a.name < b.name;
     });
     
-    // Create tabs in sorted order
+    // Create tabs for each category that has registrations
     int tabsCreated = 0;
-    for (const auto& tabInfo : tabsToCreate) {
-        qDebug() << QString("[ParticipantsWindow] Creating tab: '%1 - %2': %3 registrations")
-                   .arg(tabInfo.modalityName, tabInfo.categoryName, QString::number(tabInfo.registrations.size()));
+    for (const auto& category : sortedCategories) {
+        auto categoryRegistrations = getRegistrationsByCategory(category.id);
         
-        QTableWidget* table = new QTableWidget();
-        table->setColumnCount(3);
-        QStringList headers = {"Número", "Nome do Atleta", "Código da Placa"};
-        table->setHorizontalHeaderLabels(headers);
-        
-        // Configure table
-        table->setSelectionBehavior(QAbstractItemView::SelectRows);
-        table->setAlternatingRowColors(true);
-        table->horizontalHeader()->setStretchLastSection(true);
-        table->horizontalHeader()->resizeSection(0, 80);
-        table->horizontalHeader()->resizeSection(1, 200);
-        table->horizontalHeader()->resizeSection(2, 150);
-        
-        populateCombinationTable(table, tabInfo.registrations);
-        
-        tabWidget->addTab(table, QString("%1 - %2 (%3)")
-                         .arg(tabInfo.modalityName, tabInfo.categoryName)
-                         .arg(tabInfo.registrations.size()));
-        
-        tabsCreated++;
+        if (!categoryRegistrations.isEmpty()) {
+            qDebug() << QString("[ParticipantsWindow] Creating tab for category: '%1': %2 registrations")
+                       .arg(category.name, QString::number(categoryRegistrations.size()));
+            
+            QTableWidget* table = new QTableWidget();
+            // QStringList headers = {"Modalidade", "Código da Placa", "Nome do Atleta"};
+            table->setColumnCount(headers.size());
+            table->setHorizontalHeaderLabels(headers);
+            
+            // Configure table
+            table->setSelectionBehavior(QAbstractItemView::SelectRows);
+            table->setAlternatingRowColors(true);
+            table->horizontalHeader()->setStretchLastSection(true);
+            table->horizontalHeader()->resizeSection(0, 80);
+            table->horizontalHeader()->resizeSection(1, 250);
+            table->horizontalHeader()->resizeSection(2, 150);
+            table->horizontalHeader()->resizeSection(3, 120);
+            
+            populateTable(table, categoryRegistrations);
+            
+            tabWidget->addTab(table, QString("%1 (%2)")
+                             .arg(category.name)
+                             .arg(categoryRegistrations.size()));
+            
+            tabsCreated++;
+        }
     }
     
     qDebug() << "[ParticipantsWindow] Created" << tabsCreated << "tabs with data";
@@ -216,21 +196,23 @@ void ParticipantsWindow::populateTable(QTableWidget* table, const QVector<Regist
                    .arg(row).arg(registration.id).arg(registration.athleteId).arg(registration.plateCode);
         
         // Number (row + 1)
-        table->setItem(row, 0, new QTableWidgetItem(QString::number(row + 1)));
-        
-        // Athlete name
-        QString athleteName = getAthleteName(registration.athleteId);
-        table->setItem(row, 1, new QTableWidgetItem(athleteName));
+        // table->setItem(row, 0, new QTableWidgetItem(QString::number(row + 1)));
         
         // Modality name
         QString modalityName = getModalityName(registration.modalityId);
-        table->setItem(row, 2, new QTableWidgetItem(modalityName));
-        
+        table->setItem(row, getHeaderIndex("Modalidade"), new QTableWidgetItem(modalityName));
+
         // Plate code
-        table->setItem(row, 3, new QTableWidgetItem(registration.plateCode));
+        table->setItem(row, getHeaderIndex("Código da Placa"), new QTableWidgetItem(registration.plateCode));
+
+        // Athlete name
+        QString athleteName = getAthleteName(registration.athleteId);
+        table->setItem(row, getHeaderIndex("Nome do Atleta"), new QTableWidgetItem(athleteName));
+        
+        
         
         // Make items read-only
-        for (int col = 0; col < 4; ++col) {
+        for (int col = 0; col < headers.size(); ++col) {
             if (table->item(row, col)) {
                 table->item(row, col)->setFlags(table->item(row, col)->flags() & ~Qt::ItemIsEditable);
             }
