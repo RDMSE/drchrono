@@ -1101,6 +1101,36 @@ void CronometerWindow::updateStartButtonState() {
 }
 
 bool CronometerWindow::canGenerateReport() const {
-    // Allow report generation for any selected event
-    return currentTrialId > 0;
+    // Allow generating report only for events of the day or past that are finished
+    if (currentTrialId <= 0)
+        return false;
+
+    // Search for the selected event
+    auto it = std::find_if(loadedEvents.begin(), loadedEvents.end(),
+        [this](const Trials::TrialInfo& trial) {
+            return trial.id == currentTrialId;
+        });
+    if (it == loadedEvents.end())
+        return false;
+
+    const auto& trial = *it;
+    const auto epochZero = Utils::DateTimeUtils::epochZero();
+    QDate today = QDate::currentDate();
+
+    // Only allow if:
+    // - Event is in the past or today AND is finished
+    // - OR is currently being timed (started == true for the selected event)
+    // - Future events never enable
+    if (trial.scheduledDateTime.date() > today)
+        return false;
+
+    // Allow if currently being timed
+    if (started && trial.id == currentTrialId)
+        return true;
+
+    // Allow if finished
+    if (trial.endDateTime != epochZero)
+        return true;
+
+    return false;
 }
