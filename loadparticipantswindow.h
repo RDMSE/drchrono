@@ -33,8 +33,8 @@ struct ParticipantData {
     QString plateCode;
     QString category;
     QString modality;
-    bool valid = false;
     QString errorMessage = "";
+    bool isValid() const { return errorMessage.isEmpty(); }
 };
 
 struct ConflictData {

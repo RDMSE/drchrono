@@ -287,7 +287,7 @@ void LoadParticipantsWindow::loadPreview()
         int totalErrors = 0;
         
         for (const auto& participant : participantsData) {
-            if (participant.valid) {
+            if (participant.isValid()) {
                 validCount++;
             } else {
                 totalErrors++;
@@ -369,33 +369,28 @@ void LoadParticipantsWindow::validateParticipantsData()
 {
     // First pass: basic validation
     for (auto& participant : participantsData) {
-        participant.valid = true;
         participant.errorMessage = "";
         
         // Validate name
         if (participant.name.isEmpty()) {
-            participant.valid = false;
             participant.errorMessage = "Name is required";
             continue;
         }
         
         // Validate plate code
         if (participant.plateCode.isEmpty()) {
-            participant.valid = false;
             participant.errorMessage = "Plate code is required";
             continue;
         }
         
         // Validate category
         if (participant.category.isEmpty()) {
-            participant.valid = false;
             participant.errorMessage = "Category is required";
             continue;
         }
         
         // Validate modality
         if (participant.modality.isEmpty()) {
-            participant.valid = false;
             participant.errorMessage = "Modality is required";
             continue;
         }
@@ -419,7 +414,6 @@ void LoadParticipantsWindow::validateParticipantsData()
         if (indices.size() > 1) {
             // Mark all occurrences as invalid
             for (int index : indices) {
-                participantsData[index].valid = false;
                 participantsData[index].errorMessage = QString("Duplicate plate (%1 occurrences)").arg(indices.size());
             }
             qDebug() << QString("Found duplicate plate code '%1' in %2 rows").arg(plateCode, QString::number(indices.size()));
@@ -442,12 +436,12 @@ void LoadParticipantsWindow::updatePreviewTable()
         previewTable->setItem(row, 2, new QTableWidgetItem(participant.category));
         previewTable->setItem(row, 3, new QTableWidgetItem(participant.modality));
         
-        QString status = participant.valid ? "Valid" : participant.errorMessage;
+        QString status = participant.isValid() ? "Valid" : participant.errorMessage;
         QTableWidgetItem* statusItem = new QTableWidgetItem(status);
         
         // Color coding based on validation
         QColor rowColor;
-        if (participant.valid) {
+        if (participant.isValid()) {
             rowColor = QColor(200, 255, 200); // Light green
         } else if (participant.errorMessage.contains("duplicate plate", Qt::CaseInsensitive)) {
             rowColor = QColor(255, 150, 150); // Darker red for duplicates
@@ -505,7 +499,7 @@ void LoadParticipantsWindow::importParticipants()
     // Count valid participants
     int validCount = 0;
     for (const auto& participant : participantsData) {
-        if (participant.valid) {
+        if (participant.isValid()) {
             validCount++;
         }
     }
@@ -542,7 +536,7 @@ void LoadParticipantsWindow::importParticipants()
         for (int i = 0; i < participantsData.size(); ++i) {
             const auto& participant = participantsData[i];
             
-            if (!participant.valid) {
+            if (!participant.isValid()) {
                 continue;
             }
             
@@ -863,7 +857,7 @@ void LoadParticipantsWindow::detectConflicts()
         
         // Check each participant from Excel for conflicts
         for (const auto& participant : participantsData) {
-            if (!participant.valid) continue;
+            if (!participant.isValid()) continue;
             
             QString participantName = participant.name.trimmed().toLower();
             
