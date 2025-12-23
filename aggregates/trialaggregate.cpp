@@ -4,9 +4,10 @@
 #include <algorithm>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <utility>
 
 Aggregates::TrialAggregate::TrialAggregate(
-    QSqlDatabase db,
+    const QSqlDatabase& db,
     std::shared_ptr<Athletes::Repository> athletesRepo,
     std::shared_ptr<Categories::Repository> categoriesRepo,
     std::shared_ptr<Modalities::Repository> modalitiesRepo,
@@ -14,12 +15,12 @@ Aggregates::TrialAggregate::TrialAggregate(
     std::shared_ptr<Registrations::Repository> registrationsRepo,
     std::shared_ptr<Results::Repository> resultsRepo)
     : m_db(db)
-    , m_athletesRepo(athletesRepo)
-    , m_categoriesRepo(categoriesRepo)
-    , m_modalitiesRepo(modalitiesRepo)
-    , m_trialsRepo(trialsRepo)
-    , m_registrationsRepo(registrationsRepo)
-    , m_resultsRepo(resultsRepo)
+    , m_athletesRepo(std::move(athletesRepo))
+    , m_categoriesRepo(std::move(categoriesRepo))
+    , m_modalitiesRepo(std::move(modalitiesRepo))
+    , m_trialsRepo(std::move(trialsRepo))
+    , m_registrationsRepo(std::move(registrationsRepo))
+    , m_resultsRepo(std::move(resultsRepo))
 {
 }
 
@@ -63,7 +64,7 @@ tl::expected<Aggregates::TrialSummary, QString> Aggregates::TrialAggregate::getT
         return tl::unexpected("Error getting registrations: " + registrationsResult.error());
     }
 
-    Trials::TrialInfo trial {
+    const Trials::TrialInfo trial {
         .id = query.value(0).toInt(),
         .name = query.value(1).toString(),
         .scheduledDateTime = QDateTime::fromString(query.value(2).toString(), Qt::ISODate),
@@ -82,7 +83,7 @@ tl::expected<Aggregates::TrialSummary, QString> Aggregates::TrialAggregate::getT
     };
 }
 
-tl::expected<QVector<Aggregates::RegistrationDetail>, QString> Aggregates::TrialAggregate::getTrialRegistrations(int trialId) {
+tl::expected<QVector<Aggregates::RegistrationDetail>, QString> Aggregates::TrialAggregate::getTrialRegistrations(int trialId) const {
     QSqlQuery query(m_db);
     
     // A single query with JOINs to fetch all data
@@ -112,7 +113,7 @@ tl::expected<QVector<Aggregates::RegistrationDetail>, QString> Aggregates::Trial
     QVector<RegistrationDetail> details;
     
     while (query.next()) {
-        Registrations::Registration registration {
+        const Registrations::Registration registration {
             .id = query.value(0).toInt(),
             .trialId = query.value(1).toInt(),
             .athleteId = query.value(2).toInt(),
@@ -121,17 +122,17 @@ tl::expected<QVector<Aggregates::RegistrationDetail>, QString> Aggregates::Trial
             .categoryId = query.value(5).toInt()
         };
 
-        Athletes::Athlete athlete {
+        const Athletes::Athlete athlete {
             .id = registration.athleteId,
             .name = query.value(6).toString()
         };
 
-        Categories::Category category {
+        const Categories::Category category {
             .id = registration.categoryId,
             .name = query.value(7).toString()
         };
 
-        Modalities::Modality modality {
+        const Modalities::Modality modality {
             .id = registration.modalityId,
             .name = query.value(8).toString()
         };
@@ -160,7 +161,7 @@ tl::expected<QVector<Aggregates::RegistrationDetail>, QString> Aggregates::Trial
     return details;
 }
 
-tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getTrialRanking(int trialId) {
+tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getTrialRanking(const int trialId) const {
     QSqlQuery query(m_db);
     
     // Simplified query with ROW_NUMBER for automatic positioning
@@ -191,22 +192,22 @@ tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggreg
     QVector<RankingEntry> ranking;
     
     while (query.next()) {
-        Athletes::Athlete athlete {
+        const Athletes::Athlete athlete {
             .id = query.value(1).toInt(),
             .name = query.value(2).toString()
         };
 
-        Categories::Category category {
+        const Categories::Category category {
             .id = query.value(3).toInt(),
             .name = query.value(4).toString()
         };
 
-        Modalities::Modality modality {
+        const Modalities::Modality modality {
             .id = query.value(5).toInt(),
             .name = query.value(6).toString()
         };
 
-        Results::Result result {
+        const Results::Result result {
             .id = query.value(8).toInt(),
             .registrationId = query.value(9).toInt(),
             .startTime = QDateTime::fromString(query.value(10).toString(), Qt::ISODate),
@@ -229,7 +230,7 @@ tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggreg
     return ranking;
 }
 
-tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getRankingByCategory(int trialId, int categoryId) {
+tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getRankingByCategory(const int trialId, const int categoryId) const {
     QSqlQuery query(m_db);
     
     // Simplified query filtering by category
@@ -261,10 +262,10 @@ tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggreg
     QVector<RankingEntry> ranking;
     
     while (query.next()) {
-        Athletes::Athlete athlete { .id = query.value(1).toInt(), .name = query.value(2).toString() };
-        Categories::Category category { .id = query.value(3).toInt(), .name = query.value(4).toString() };
-        Modalities::Modality modality { .id = query.value(5).toInt(), .name = query.value(6).toString() };
-        Results::Result result {
+        const Athletes::Athlete athlete { .id = query.value(1).toInt(), .name = query.value(2).toString() };
+        const Categories::Category category { .id = query.value(3).toInt(), .name = query.value(4).toString() };
+        const Modalities::Modality modality { .id = query.value(5).toInt(), .name = query.value(6).toString() };
+        const Results::Result result {
             .id = query.value(8).toInt(), .registrationId = query.value(9).toInt(),
             .startTime = QDateTime::fromString(query.value(10).toString(), Qt::ISODate),
             .endTime = QDateTime::fromString(query.value(11).toString(), Qt::ISODate),
@@ -279,7 +280,7 @@ tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggreg
     return ranking;
 }
 
-tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getRankingByModality(int trialId, int modalityId) {
+tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggregate::getRankingByModality(const int trialId, const int modalityId) const {
     QSqlQuery query(m_db);
     
     // Simplified query filtering by modality
@@ -311,10 +312,10 @@ tl::expected<QVector<Aggregates::RankingEntry>, QString> Aggregates::TrialAggreg
     QVector<RankingEntry> ranking;
     
     while (query.next()) {
-        Athletes::Athlete athlete { .id = query.value(1).toInt(), .name = query.value(2).toString() };
-        Categories::Category category { .id = query.value(3).toInt(), .name = query.value(4).toString() };
-        Modalities::Modality modality { .id = query.value(5).toInt(), .name = query.value(6).toString() };
-        Results::Result result {
+        const Athletes::Athlete athlete { .id = query.value(1).toInt(), .name = query.value(2).toString() };
+        const Categories::Category category { .id = query.value(3).toInt(), .name = query.value(4).toString() };
+        const Modalities::Modality modality { .id = query.value(5).toInt(), .name = query.value(6).toString() };
+        const Results::Result result {
             .id = query.value(8).toInt(), .registrationId = query.value(9).toInt(),
             .startTime = QDateTime::fromString(query.value(10).toString(), Qt::ISODate),
             .endTime = QDateTime::fromString(query.value(11).toString(), Qt::ISODate),
@@ -334,11 +335,10 @@ tl::expected<Aggregates::RegistrationDetail, QString> Aggregates::TrialAggregate
     const QString& athleteName,
     const QString& plateCode,
     const QString& categoryName,
-    const QString& modalityName) {
+    const QString& modalityName) const {
 
     // Verify if the trial exists
-    auto trialResult = m_trialsRepo->getTrialById(trialId);
-    if (!trialResult) {
+    if (auto trialResult = m_trialsRepo->getTrialById(trialId); !trialResult) {
         return tl::unexpected("Trial not found: " + trialResult.error());
     }
 
@@ -393,11 +393,11 @@ tl::expected<Aggregates::RegistrationDetail, QString> Aggregates::TrialAggregate
 }
 
 tl::expected<Results::Result, QString> Aggregates::TrialAggregate::recordResult(
-    int trialId,
+    const int trialId,
     const QString& plateCode,
     const QDateTime& startTime,
     const QDateTime& endTime,
-    const QString& notes) {
+    const QString& notes) const {
 
     // Fetch registration by plate code
     auto registrationResult = m_registrationsRepo->getRegistrationByPlateCode(trialId, plateCode);
@@ -427,26 +427,6 @@ tl::expected<Results::Result, QString> Aggregates::TrialAggregate::recordResult(
     return resultResult.value();
 }
 
-QString Aggregates::TrialAggregate::formatTime(int durationMs) {
-    int totalSeconds = durationMs / 1000;
-    int hours = totalSeconds / 3600;
-    int minutes = (totalSeconds % 3600) / 60;
-    int seconds = totalSeconds % 60;
-    int milliseconds = durationMs % 1000;
-
-    if (hours > 0) {
-        return QString("%1:%2:%3.%4")
-            .arg(hours, 2, 10, QChar('0'))
-            .arg(minutes, 2, 10, QChar('0'))
-            .arg(seconds, 2, 10, QChar('0'))
-            .arg(milliseconds / 10, 2, 10, QChar('0'));
-    } else {
-        return QString("%1:%2.%3")
-            .arg(minutes, 2, 10, QChar('0'))
-            .arg(seconds, 2, 10, QChar('0'))
-            .arg(milliseconds / 10, 2, 10, QChar('0'));
-    }
-}
 
 int Aggregates::TrialAggregate::calculateDuration(const QDateTime& start, const QDateTime& end) {
     if (!start.isValid() || !end.isValid() || start >= end) {

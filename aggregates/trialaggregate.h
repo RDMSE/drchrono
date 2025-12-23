@@ -54,37 +54,35 @@ struct RankingEntry {
 class TrialAggregate
 {
 public:
-    explicit TrialAggregate(
-        QSqlDatabase db,
-        std::shared_ptr<Athletes::Repository> athletesRepo,
-        std::shared_ptr<Categories::Repository> categoriesRepo,
-        std::shared_ptr<Modalities::Repository> modalitiesRepo,
-        std::shared_ptr<Trials::Repository> trialsRepo,
-        std::shared_ptr<Registrations::Repository> registrationsRepo,
-        std::shared_ptr<Results::Repository> resultsRepo
-    );
+
+    explicit TrialAggregate(const QSqlDatabase &db, std::shared_ptr<Athletes::Repository> athletesRepo,
+                   std::shared_ptr<Categories::Repository> categoriesRepo,
+                   std::shared_ptr<Modalities::Repository> modalitiesRepo,
+                   std::shared_ptr<Trials::Repository> trialsRepo,
+                   std::shared_ptr<Registrations::Repository> registrationsRepo,
+                   std::shared_ptr<Results::Repository> resultsRepo);
 
     tl::expected<TrialSummary, QString> getTrialSummary(int trialId);
-    tl::expected<QVector<RegistrationDetail>, QString> getTrialRegistrations(int trialId);
-    tl::expected<QVector<RankingEntry>, QString> getTrialRanking(int trialId);
-    tl::expected<QVector<RankingEntry>, QString> getRankingByCategory(int trialId, int categoryId);
-    tl::expected<QVector<RankingEntry>, QString> getRankingByModality(int trialId, int modalityId);
+    [[nodiscard]] tl::expected<QVector<RegistrationDetail>, QString> getTrialRegistrations(int trialId) const;
+    [[nodiscard]] tl::expected<QVector<RankingEntry>, QString> getTrialRanking(int trialId) const;
+    [[nodiscard]] tl::expected<QVector<RankingEntry>, QString> getRankingByCategory(int trialId, int categoryId) const;
+    [[nodiscard]] tl::expected<QVector<RankingEntry>, QString> getRankingByModality(int trialId, int modalityId) const;
     
-    tl::expected<RegistrationDetail, QString> registerAthleteForTrial(
+    [[nodiscard]] tl::expected<RegistrationDetail, QString> registerAthleteForTrial(
         int trialId,
         const QString& athleteName,
         const QString& plateCode,
         const QString& categoryName,
         const QString& modalityName
-    );
+    ) const;
     
-    tl::expected<Results::Result, QString> recordResult(
+    [[nodiscard]] tl::expected<Results::Result, QString> recordResult(
         int trialId,
         const QString& plateCode,
         const QDateTime& startTime,
         const QDateTime& endTime,
         const QString& notes = ""
-    );
+    ) const;
 
 private:
     QSqlDatabase m_db;
@@ -95,8 +93,7 @@ private:
     std::shared_ptr<Registrations::Repository> m_registrationsRepo;
     std::shared_ptr<Results::Repository> m_resultsRepo;
 
-    QString formatTime(int durationMs);
-    int calculateDuration(const QDateTime& start, const QDateTime& end);
+    static int calculateDuration(const QDateTime& start, const QDateTime& end);
 };
 
 };

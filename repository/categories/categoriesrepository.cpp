@@ -2,14 +2,13 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
-Categories::Repository::Repository(QSqlDatabase db) : m_db(db) {
-    auto value = createCategoriesTable();
-    if (!value) {
+Categories::Repository::Repository(const QSqlDatabase& db) : m_db(db) {
+    if (auto value = createCategoriesTable(); !value) {
         qFatal("Categories table creation failed: %s", value.error().toLocal8Bit().constData());
     }
 }
 
-tl::expected<void, QString> Categories::Repository::createCategoriesTable() {
+tl::expected<void, QString> Categories::Repository::createCategoriesTable() const {
     QSqlQuery query(m_db);
 
     const QString sql = R"(
@@ -26,7 +25,7 @@ tl::expected<void, QString> Categories::Repository::createCategoriesTable() {
     return {};
 }
 
-tl::expected<Categories::Category, QString> Categories::Repository::createCategory(const QString& name) {
+tl::expected<Categories::Category, QString> Categories::Repository::createCategory(const QString& name) const {
     if (name.isEmpty()) {
         return tl::unexpected("[CR]: invalid name");
     }
@@ -65,7 +64,7 @@ tl::expected<Categories::Category, QString> Categories::Repository::createCatego
     };
 }
 
-tl::expected<Categories::Category, QString> Categories::Repository::getCategoryById(const int id) {
+tl::expected<Categories::Category, QString> Categories::Repository::getCategoryById(const int id) const {
     const QString sql = R"(
         SELECT
             name
@@ -88,7 +87,7 @@ tl::expected<Categories::Category, QString> Categories::Repository::getCategoryB
 
 }
 
-tl::expected<Categories::Category, QString> Categories::Repository::getCategoryByName(const QString& name) {
+tl::expected<Categories::Category, QString> Categories::Repository::getCategoryByName(const QString& name) const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -110,7 +109,7 @@ tl::expected<Categories::Category, QString> Categories::Repository::getCategoryB
     };
 }
 
-tl::expected<QVector<Categories::Category>, QString> Categories::Repository::getAllCategories() {
+tl::expected<QVector<Categories::Category>, QString> Categories::Repository::getAllCategories() const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -133,7 +132,7 @@ tl::expected<QVector<Categories::Category>, QString> Categories::Repository::get
 
     return results;
 }
-tl::expected<Categories::Category, QString> Categories::Repository::updateCategoryById(const int id, const Categories::Category& category) {
+tl::expected<Categories::Category, QString> Categories::Repository::updateCategoryById(const int id, const Categories::Category& category) const {
     if (category.name.isEmpty()) {
         return tl::unexpected("[CR]: invalid name");
     }
@@ -156,7 +155,7 @@ tl::expected<Categories::Category, QString> Categories::Repository::updateCatego
     return category;
 }
 
-tl::expected<int, QString> Categories::Repository::deleteCategoryById(const int id) {
+tl::expected<int, QString> Categories::Repository::deleteCategoryById(const int id) const {
     QSqlQuery queryUpdate(m_db);
     const QString sql = R"(
         DELETE FROM categories
@@ -173,11 +172,10 @@ tl::expected<int, QString> Categories::Repository::deleteCategoryById(const int 
     return id;
 }
 
-tl::expected<int, QString> Categories::Repository::deleteCategoryByName(const QString& name) {
+tl::expected<int, QString> Categories::Repository::deleteCategoryByName(const QString& name) const {
     auto category = getCategoryByName(name);
     if (!category.has_value())
         return tl::unexpected(category.error());
-
 
     auto id = deleteCategoryById(category.value().id);
     if (!id.has_value()) {

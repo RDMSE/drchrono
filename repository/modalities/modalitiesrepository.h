@@ -5,26 +5,25 @@
 #include <QSqlDatabase>
 #include <QString>
 #include <tl/expected.hpp>
-#include <QVector>
 
 namespace Modalities {
 
 class Repository
 {
 public:
-    explicit Repository(QSqlDatabase db);
+    explicit Repository(const QSqlDatabase& db);
 
-    tl::expected<Modalities::Modality, QString> createModality(const QString& name);
-    tl::expected<Modalities::Modality, QString> getModalityById(const int id);
-    tl::expected<Modalities::Modality, QString> getModalityByName(const QString& name);
-    tl::expected<QVector<Modalities::Modality>, QString> getAllModalities();
-    tl::expected<Modalities::Modality, QString> updateModalityById(const int id, const Modalities::Modality& modality);
-    tl::expected<int, QString> deleteModalityById(const int id);
-    tl::expected<int, QString> deleteModalityByName(const QString& name);
+    [[nodiscard]] tl::expected<Modality, QString> createModality(const QString& name) const;
+    [[nodiscard]] tl::expected<Modality, QString> getModalityById(int id) const;
+    [[nodiscard]] tl::expected<Modality, QString> getModalityByName(const QString& name) const;
+    [[nodiscard]] tl::expected<QVector<Modality>, QString> getAllModalities() const;
+    [[nodiscard]] tl::expected<Modality, QString> updateModalityById(int id, const Modality& modality) const;
+    [[nodiscard]] tl::expected<int, QString> deleteModalityById(int id) const;
+    [[nodiscard]] tl::expected<int, QString> deleteModalityByName(const QString& name) const;
 
 private:
     QSqlDatabase m_db;
-    tl::expected<void, QString> createModalitiesTable();
+    [[nodiscard]] tl::expected<void, QString> createModalitiesTable() const;
 };
 
 };

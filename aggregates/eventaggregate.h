@@ -46,35 +46,32 @@ struct CrossTrialRanking {
 class EventAggregate
 {
 public:
-    explicit EventAggregate(
-        QSqlDatabase db,
-        std::shared_ptr<Athletes::Repository> athletesRepo,
-        std::shared_ptr<Categories::Repository> categoriesRepo,
-        std::shared_ptr<Modalities::Repository> modalitiesRepo,
-        std::shared_ptr<Trials::Repository> trialsRepo,
-        std::shared_ptr<Registrations::Repository> registrationsRepo,
-        std::shared_ptr<Results::Repository> resultsRepo
-    );
+    explicit EventAggregate(const QSqlDatabase &db, const std::shared_ptr<Athletes::Repository> &athletesRepo,
+                   const std::shared_ptr<Categories::Repository> &categoriesRepo,
+                   const std::shared_ptr<Modalities::Repository> &modalitiesRepo,
+                   const std::shared_ptr<Trials::Repository> &trialsRepo,
+                   const std::shared_ptr<Registrations::Repository> &registrationsRepo,
+                   const std::shared_ptr<Results::Repository> &resultsRepo);
 
-    tl::expected<EventStatistics, QString> getEventStatistics();
-    tl::expected<QVector<Trials::TrialInfo>, QString> getAllTrials();
-    tl::expected<QVector<CrossTrialRanking>, QString> getCrossTrialRanking();
-    tl::expected<QVector<Athletes::Athlete>, QString> getTopParticipatingAthletes(int limit = 10);
+    [[nodiscard]] tl::expected<EventStatistics, QString> getEventStatistics() const;
+    [[nodiscard]] tl::expected<QVector<Trials::TrialInfo>, QString> getAllTrials() const;
+    [[nodiscard]] tl::expected<QVector<CrossTrialRanking>, QString> getCrossTrialRanking() const;
+    [[nodiscard]] tl::expected<QVector<Athletes::Athlete>, QString> getTopParticipatingAthletes(int limit = 10) const;
     
     // Create new trial
-    tl::expected<Trials::TrialInfo, QString> createTrial(
+    [[nodiscard]] tl::expected<Trials::TrialInfo, QString> createTrial(
         const QString& trialName,
         const QDateTime& scheduledDateTime
-    );
+    ) const;
     
     // Search athletes by criteria
-    tl::expected<QVector<Athletes::Athlete>, QString> searchAthletes(const QString& namePattern);
+    [[nodiscard]] tl::expected<QVector<Athletes::Athlete>, QString> searchAthletes(const QString& namePattern) const;
     
     // Consolidated reports
-    tl::expected<QString, QString> generateEventReport(); // CSV or text
+    [[nodiscard]] tl::expected<QString, QString> generateEventReport() const; // CSV or text
     
     // Event validations
-    tl::expected<QVector<QString>, QString> validateEventIntegrity();
+    [[nodiscard]] tl::expected<QVector<QString>, QString> validateEventIntegrity() const;
 
 private:
     QSqlDatabase m_db;

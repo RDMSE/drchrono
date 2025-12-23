@@ -8,7 +8,7 @@
 tl::expected<QVector<QVector<QVariant>>, QString> Utils::ExcelUtils::readExcelFile(const QString& filePath)
 {
     try {
-        QFileInfo fileInfo(filePath);
+        const QFileInfo fileInfo(filePath);
         if (!fileInfo.exists()) {
             return tl::unexpected("File not found: " + filePath);
         }
@@ -16,13 +16,13 @@ tl::expected<QVector<QVector<QVariant>>, QString> Utils::ExcelUtils::readExcelFi
         if (!fileInfo.suffix().toLower().contains("xls")) {
             return tl::unexpected("Unsupported file format. Please use .xlsx or .xls files");
         }
-        
-        QXlsx::Document xlsx(filePath);
+
+        const QXlsx::Document xlsx(filePath);
         if (!xlsx.load()) {
             return tl::unexpected("Error opening Excel file: " + filePath);
         }
-        
-        QXlsx::Worksheet* worksheet = xlsx.currentWorksheet();
+
+        const QXlsx::Worksheet* worksheet = xlsx.currentWorksheet();
         if (!worksheet) {
             return tl::unexpected("No worksheet found in Excel file");
         }
@@ -30,7 +30,7 @@ tl::expected<QVector<QVector<QVariant>>, QString> Utils::ExcelUtils::readExcelFi
         QVector<QVector<QVariant>> result;
         
         // Get the range of cells with data
-        auto dimension = worksheet->dimension();
+        const auto dimension = worksheet->dimension();
         if (!dimension.isValid()) {
             return tl::unexpected("Worksheet is empty or contains invalid data");
         }
@@ -46,7 +46,7 @@ tl::expected<QVector<QVector<QVariant>>, QString> Utils::ExcelUtils::readExcelFi
                 // Debug: Log raw cell value and type for plate code column (column 1, index 0)
                 if (col == 1 && row <= 5) { // Log first few rows of plate code column
                     qDebug() << QString("Row %1, Col %2 - Type: %3, Raw: '%4'")
-                               .arg(row).arg(col).arg(cellValue.metaType().name()).arg(cellValue.toString());
+                               .arg(row).arg(col).arg(cellValue.metaType().name(), cellValue.toString());
                 }
                 
                 // Convert to string and trim
@@ -97,7 +97,7 @@ bool Utils::ExcelUtils::parseExcelCell(const QVariant& cell, QString& result)
     QString stringValue;
     
     // Always try to get the string representation first
-    QString originalString = cell.toString().trimmed();
+    const QString originalString = cell.toString().trimmed();
     
     // Handle different data types properly
     switch (cell.typeId()) {
@@ -120,11 +120,9 @@ bool Utils::ExcelUtils::parseExcelCell(const QVariant& cell, QString& result)
             
         case QMetaType::Double:
         {
-            double value = cell.toDouble();
-            
             // Check if original string had leading zeros (like "001" that became 1.0)
-            if (originalString.length() > 1 && originalString.at(0) == '0' && 
-                value == std::floor(value) && value > 0) {
+            if (const double value = cell.toDouble(); originalString.length() > 1 && originalString.at(0) == '0' &&
+                                                value == std::floor(value) && value > 0) {
                 stringValue = originalString; // Preserve original format like "001"
                 qDebug() << QString("Preserving leading zeros: '%1' (was double %2)")
                            .arg(originalString).arg(value);

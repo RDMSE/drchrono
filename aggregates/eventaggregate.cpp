@@ -6,13 +6,13 @@
 #include <QDebug>
 
 Aggregates::EventAggregate::EventAggregate(
-    QSqlDatabase db,
-    std::shared_ptr<Athletes::Repository> athletesRepo,
-    std::shared_ptr<Categories::Repository> categoriesRepo,
-    std::shared_ptr<Modalities::Repository> modalitiesRepo,
-    std::shared_ptr<Trials::Repository> trialsRepo,
-    std::shared_ptr<Registrations::Repository> registrationsRepo,
-    std::shared_ptr<Results::Repository> resultsRepo)
+    const QSqlDatabase& db,
+    const std::shared_ptr<Athletes::Repository>& athletesRepo,
+    const std::shared_ptr<Categories::Repository>& categoriesRepo,
+    const std::shared_ptr<Modalities::Repository>& modalitiesRepo,
+    const std::shared_ptr<Trials::Repository>& trialsRepo,
+    const std::shared_ptr<Registrations::Repository>& registrationsRepo,
+    const std::shared_ptr<Results::Repository>& resultsRepo)
     : m_db(db)
     , m_athletesRepo(athletesRepo)
     , m_categoriesRepo(categoriesRepo)
@@ -27,7 +27,7 @@ Aggregates::EventAggregate::EventAggregate(
     );
 }
 
-tl::expected<Aggregates::EventStatistics, QString> Aggregates::EventAggregate::getEventStatistics() {
+tl::expected<Aggregates::EventStatistics, QString> Aggregates::EventAggregate::getEventStatistics() const {
     EventStatistics stats;
     QSqlQuery query(m_db);
 
@@ -102,11 +102,11 @@ tl::expected<Aggregates::EventStatistics, QString> Aggregates::EventAggregate::g
     return stats;
 }
 
-tl::expected<QVector<Trials::TrialInfo>, QString> Aggregates::EventAggregate::getAllTrials() {
+tl::expected<QVector<Trials::TrialInfo>, QString> Aggregates::EventAggregate::getAllTrials() const {
     return m_trialsRepo->getAllTrials();
 }
 
-tl::expected<QVector<Aggregates::CrossTrialRanking>, QString> Aggregates::EventAggregate::getCrossTrialRanking() {
+tl::expected<QVector<Aggregates::CrossTrialRanking>, QString> Aggregates::EventAggregate::getCrossTrialRanking() const {
     QSqlQuery query(m_db);
     
     // simplified query - formatting done in C++
@@ -167,10 +167,10 @@ tl::expected<QVector<Aggregates::CrossTrialRanking>, QString> Aggregates::EventA
         
         if (detailQuery.exec()) {
             while (detailQuery.next()) {
-                Athletes::Athlete athlete { .id = detailQuery.value(1).toInt(), .name = detailQuery.value(2).toString() };
-                Categories::Category category { .id = detailQuery.value(3).toInt(), .name = detailQuery.value(4).toString() };
-                Modalities::Modality modality { .id = detailQuery.value(5).toInt(), .name = detailQuery.value(6).toString() };
-                Results::Result result {
+                const Athletes::Athlete athlete { .id = detailQuery.value(1).toInt(), .name = detailQuery.value(2).toString() };
+                const Categories::Category category { .id = detailQuery.value(3).toInt(), .name = detailQuery.value(4).toString() };
+                const Modalities::Modality modality { .id = detailQuery.value(5).toInt(), .name = detailQuery.value(6).toString() };
+                const Results::Result result {
                     .id = detailQuery.value(8).toInt(), .registrationId = detailQuery.value(9).toInt(),
                     .startTime = QDateTime::fromString(detailQuery.value(10).toString(), Qt::ISODate),
                     .endTime = QDateTime::fromString(detailQuery.value(11).toString(), Qt::ISODate),
@@ -191,7 +191,7 @@ tl::expected<QVector<Aggregates::CrossTrialRanking>, QString> Aggregates::EventA
     return crossRanking;
 }
 
-tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::getTopParticipatingAthletes(int limit) {
+tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::getTopParticipatingAthletes(const int limit) const {
     auto crossRankingResult = getCrossTrialRanking();
     if (!crossRankingResult) {
         return tl::unexpected(crossRankingResult.error());
@@ -211,19 +211,19 @@ tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::ge
 
 tl::expected<Trials::TrialInfo, QString> Aggregates::EventAggregate::createTrial(
     const QString& trialName,
-    const QDateTime& scheduledDateTime) {
+    const QDateTime& scheduledDateTime) const {
     
     return m_trialsRepo->createTrial(trialName, scheduledDateTime);
 }
 
-tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::searchAthletes(const QString& namePattern) {
+tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::searchAthletes(const QString& namePattern) const {
     auto allAthletesResult = m_athletesRepo->getAllAthletes();
     if (!allAthletesResult) {
         return tl::unexpected(allAthletesResult.error());
     }
 
     QVector<Athletes::Athlete> matches;
-    QString pattern = namePattern.toLower();
+    const QString pattern = namePattern.toLower();
 
     for (const auto& athlete : allAthletesResult.value()) {
         if (athlete.name.toLower().contains(pattern)) {
@@ -234,7 +234,7 @@ tl::expected<QVector<Athletes::Athlete>, QString> Aggregates::EventAggregate::se
     return matches;
 }
 
-tl::expected<QString, QString> Aggregates::EventAggregate::generateEventReport() {
+tl::expected<QString, QString> Aggregates::EventAggregate::generateEventReport() const {
     auto statsResult = getEventStatistics();
     if (!statsResult) {
         return tl::unexpected("Error getting statistics: " + statsResult.error());
@@ -268,7 +268,7 @@ tl::expected<QString, QString> Aggregates::EventAggregate::generateEventReport()
     return report;
 }
 
-tl::expected<QVector<QString>, QString> Aggregates::EventAggregate::validateEventIntegrity() {
+tl::expected<QVector<QString>, QString> Aggregates::EventAggregate::validateEventIntegrity() const {
     QVector<QString> issues;
     QSqlQuery query(m_db);
 

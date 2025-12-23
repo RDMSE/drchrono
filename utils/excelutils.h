@@ -1,10 +1,8 @@
 #ifndef EXCELUTILS_H
 #define EXCELUTILS_H
 
-#include <QString>
 #include <QSqlDatabase>
 #include <QVariant>
-#include <QVector>
 #include <tl/expected.hpp>
 
 namespace Utils {

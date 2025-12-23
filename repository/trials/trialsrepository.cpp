@@ -8,15 +8,13 @@
 
 namespace Trials {
 
-Trials::Repository::Repository(QSqlDatabase db) : m_db(db) {
-    auto value = createTrialsTable();
-    if (!value) {
+Repository::Repository(const QSqlDatabase& db) : m_db(db) {
+    if (auto value = createTrialsTable(); !value) {
         qFatal("Trials table creation failed: %s", value.error().toLocal8Bit().constData());
     }
 }
 
-tl::expected<void, QString> Trials::Repository::createTrialsTable()
-{
+tl::expected<void, QString> Repository::createTrialsTable() const {
     QSqlQuery query(m_db);
 
     const QString sql = R"(
@@ -37,7 +35,7 @@ tl::expected<void, QString> Trials::Repository::createTrialsTable()
     return {};
 }
 
-tl::expected<Trials::TrialInfo, QString> Trials::Repository::createTrial(const QString& name, const QDateTime& schedTime) {
+tl::expected<TrialInfo, QString> Repository::createTrial(const QString& name, const QDateTime& schedTime) const {
     if (name.isEmpty()) {
         return tl::unexpected("[TR]: invalid name");
     }
@@ -71,7 +69,7 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::createTrial(const Q
         return tl::unexpected("[TR]: Error fetching '" + name + "' from trials table. Error: " + querySelect.lastError().text());
     }
 
-    return (Trials::TrialInfo) {
+    return (TrialInfo) {
         .id = querySelect.value(0).toInt(),
         .name = querySelect.value(1).toString(),
         .scheduledDateTime = schedTime,
@@ -80,7 +78,7 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::createTrial(const Q
     };
 }
 
-tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialById(const int id) {
+tl::expected<TrialInfo, QString> Repository::getTrialById(const int id) const {
     const QString sql = R"(
         SELECT
             name,
@@ -100,11 +98,11 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialById(const 
     }
 
     if (querySelect.next()) {
-        auto scheduledDateTime = querySelect.value(1).toString();
-        auto startDateTime = querySelect.value(2).toString();
-        auto endDateTime = querySelect.value(3).toString();
+        const auto scheduledDateTime = querySelect.value(1).toString();
+        const auto startDateTime = querySelect.value(2).toString();
+        const auto endDateTime = querySelect.value(3).toString();
 
-        return (Trials::TrialInfo) {
+        return (TrialInfo) {
             .id = id,
             .name = querySelect.value(0).toString(),
             .scheduledDateTime = Utils::DateTimeUtils::fromStringOrDefault(scheduledDateTime),
@@ -115,7 +113,7 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialById(const 
     return {};
 }
 
-tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialByName(const QString& name) {
+tl::expected<TrialInfo, QString> Repository::getTrialByName(const QString& name) const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -135,11 +133,11 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialByName(cons
     }
 
     if (querySelect.next()) {
-        auto scheduledDateTime = querySelect.value(1).toString();
-        auto startDateTime = querySelect.value(2).toString();
-        auto endDateTime = querySelect.value(3).toString();
+        const auto scheduledDateTime = querySelect.value(1).toString();
+        const auto startDateTime = querySelect.value(2).toString();
+        const auto endDateTime = querySelect.value(3).toString();
 
-        return (Trials::TrialInfo) {
+        return (TrialInfo) {
             .id = querySelect.value(0).toInt(),
             .name = name,
             .scheduledDateTime = Utils::DateTimeUtils::fromStringOrDefault(scheduledDateTime),
@@ -150,7 +148,7 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::getTrialByName(cons
     return {};
 }
 
-tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getAllTrials() {
+tl::expected<QVector<TrialInfo>, QString> Repository::getAllTrials() const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -167,11 +165,11 @@ tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getAllTria
         return tl::unexpected("[TR]: Error fetching registers from trials table. Error: " + querySelect.lastError().text());
     }
 
-    QVector<Trials::TrialInfo> results;
+    QVector<TrialInfo> results;
     while (querySelect.next()) {
-        auto scheduledDateTime = querySelect.value(2).toString();
-        auto startDateTime = querySelect.value(3).toString();
-        auto endDateTime = querySelect.value(4).toString();
+        const auto scheduledDateTime = querySelect.value(2).toString();
+        const auto startDateTime = querySelect.value(3).toString();
+        const auto endDateTime = querySelect.value(4).toString();
 
         results.push_back({
             .id = querySelect.value(0).toInt(),
@@ -185,7 +183,7 @@ tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getAllTria
     return results;
 }
 
-tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getTrialsByDate(const QDate& date) {
+tl::expected<QVector<TrialInfo>, QString> Repository::getTrialsByDate(const QDate& date) const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -208,9 +206,9 @@ tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getTrialsB
 
     QVector<Trials::TrialInfo> results;
     while (querySelect.next()) {
-        auto scheduledDateTime = querySelect.value(2).toString();
-        auto startDateTime = querySelect.value(3).toString();
-        auto endDateTime = querySelect.value(4).toString();
+        const auto scheduledDateTime = querySelect.value(2).toString();
+        const auto startDateTime = querySelect.value(3).toString();
+        const auto endDateTime = querySelect.value(4).toString();
 
         results.push_back({
            .id = querySelect.value(0).toInt(),
@@ -224,12 +222,8 @@ tl::expected<QVector<Trials::TrialInfo>, QString> Trials::Repository::getTrialsB
     return results;
 }
 
-tl::expected<Trials::TrialInfo, QString> Trials::Repository::updateTrialById(const int id, const Trials::TrialInfo& trial) {
+tl::expected<TrialInfo, QString> Repository::updateTrialById(const int id, const TrialInfo& trial) const {
     QSqlQuery queryUpdate(m_db);
-    QString conditional = R"(
-        WHERE id = :id
-    )";
-
     QStringList updateFields;
     
     if (Utils::DateTimeUtils::isValid(trial.endDateTime)) {
@@ -284,7 +278,7 @@ tl::expected<Trials::TrialInfo, QString> Trials::Repository::updateTrialById(con
     return getTrialById(id);
 }
 
-tl::expected<int, QString> Trials::Repository::deleteTrialById(const int id) {
+tl::expected<int, QString> Repository::deleteTrialById(const int id) const {
     QSqlQuery queryUpdate(m_db);
     const QString sql = R"(
         DELETE FROM trials
@@ -301,7 +295,7 @@ tl::expected<int, QString> Trials::Repository::deleteTrialById(const int id) {
     return id;
 }
 
-tl::expected<int, QString> Trials::Repository::deleteTrialByName(const QString& name) {
+tl::expected<int, QString> Repository::deleteTrialByName(const QString& name) const {
     auto modality = getTrialByName(name);
     if (!modality.has_value())
         return tl::unexpected(modality.error());
@@ -315,7 +309,7 @@ tl::expected<int, QString> Trials::Repository::deleteTrialByName(const QString& 
 }
 
 
-tl::expected<std::optional<Trials::TrialInfo>, QString> Trials::Repository::getRunningTrial(const int openTrialWindowDays) {
+tl::expected<std::optional<TrialInfo>, QString> Repository::getRunningTrial(const int openTrialWindowDays) const {
     // search all trials
     auto allTrialsResult = getAllTrials();
     if (!allTrialsResult.has_value()) {

@@ -31,13 +31,13 @@ class CronometerWindow : public QMainWindow
 
 public:
     CronometerWindow(QWidget *parent = nullptr);
-    ~CronometerWindow();
+    ~CronometerWindow() override;
 
 private slots:
     void on_btnStart_clicked();
     void on_btnRegister_clicked();
-    void updateCounterTimer();
-    void updateRegisterButton();
+    void updateCounterTimer() const;
+    void updateRegisterButton() const;
     void onEventSelected();
     void on_actionCreate_New_Event_triggered();
     void on_actionShow_triggered();
@@ -52,40 +52,40 @@ private:
     DBManager chronoDb;
     
     // cronometer state
-    bool started;
-    QDateTime startTime;
-    QTimer timer;
-    QTimer startButtonUpdateTimer;
-    int currentTrialId;
+    bool m_started;
+    QDateTime m_startTime;
+    QTimer m_timer;
+    QTimer m_startButtonUpdateTimer;
+    int m_currentTrialId;
     
     // Dynamic events menu
-    QMenu* eventsSubmenu;
-    QVector<Trials::TrialInfo> loadedEvents;
-    QString selectedEventName;
+    QMenu* m_eventsSubmenu;
+    QVector<Trials::TrialInfo> m_loadedEvents;
+    QString m_selectedEventName;
     
     // Configuration
-    const char* timeFormat = "hh:mm:ss";
-    const char* eventMenuTimeFormat = "dd/MM/yyyy hh:mm";
-    QString dbPath;
-    QString reportPath;
-    int openTrialWindowDays;
+    static constexpr auto timeFormat = "hh:mm:ss";
+    static constexpr auto eventMenuTimeFormat = "dd/MM/yyyy hh:mm:ss";
+    QString m_dbPath;
+    QString m_reportPath;
+    int m_openTrialWindowDays;
     
     // Helper methods
     void loadSettings();
     void loadEventsToMenu();
     void selectEventById(int eventId);
-    void setControlsStatus(const bool status);
+    void setControlsStatus(bool status) const;
     void startCounterTimer();
     void stopCounterTimer();
     void loadTodayTrial();
     void checkAndStartRunningTrial();
-    void updateMenusState();
+    void updateMenusState() const;
     void showEventSelectionDialog();
-    void generateReport();
-    void closeOpenedEvents();
-    bool canStartEvent(const QDateTime& scheduledDateTime) const;
+    void generateReport() const;
+    void closeOpenedEvents() const;
+    static bool canStartEvent(const QDateTime& scheduledDateTime) ;
     void updateStartButtonState();
-    bool canGenerateReport() const;
+    [[nodiscard]] bool canGenerateReport() const;
 };
 
 #endif // CRONOMETERWINDOW_H

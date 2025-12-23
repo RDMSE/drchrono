@@ -1,40 +1,36 @@
-#ifndef RESULTSREPOSITORY_H
-#define RESULTSREPOSITORY_H
+#pragma once
 
 #include "result.h"
 #include <QSqlDatabase>
 #include <QString>
 #include <QDateTime>
 #include <tl/expected.hpp>
-#include <QVector>
 
 namespace Results {
 
 class Repository
 {
 public:
-    explicit Repository(QSqlDatabase db);
+    explicit Repository(const QSqlDatabase& db);
 
-    tl::expected<Results::Result, QString> createResult(
+    [[nodiscard]] tl::expected<Result, QString> createResult(
         int registrationId, 
         const QDateTime& startTime, 
         const QDateTime& endTime, 
         int durationMs, 
         const QString& notes = ""
-    );
-    tl::expected<Results::Result, QString> getResultById(const int id);
-    tl::expected<Results::Result, QString> getResultByRegistration(int registrationId);
-    tl::expected<QVector<Results::Result>, QString> getResultsByTrial(int trialId);
-    tl::expected<QVector<Results::Result>, QString> getAllResults();
-    tl::expected<Results::Result, QString> updateResultById(const int id, const Results::Result& result);
-    tl::expected<int, QString> deleteResultById(const int id);
-    tl::expected<int, QString> deleteResultsByRegistration(const int registrationId);
+    ) const;
+    [[nodiscard]] tl::expected<Result, QString> getResultById(int id) const;
+    [[nodiscard]] tl::expected<Result, QString> getResultByRegistration(int registrationId) const;
+    [[nodiscard]] tl::expected<QVector<Result>, QString> getResultsByTrial(int trialId) const;
+    [[nodiscard]] tl::expected<QVector<Result>, QString> getAllResults() const;
+    [[nodiscard]] tl::expected<Result, QString> updateResultById(int id, const Result& result) const;
+    [[nodiscard]] tl::expected<int, QString> deleteResultById(int id) const;
+    [[nodiscard]] tl::expected<int, QString> deleteResultsByRegistration(int registrationId) const;
 
 private:
     QSqlDatabase m_db;
-    tl::expected<void, QString> createResultsTable();
+    [[nodiscard]] tl::expected<void, QString> createResultsTable() const;
 };
 
 };
-
-#endif // RESULTSREPOSITORY_H
