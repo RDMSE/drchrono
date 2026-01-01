@@ -39,7 +39,7 @@ CronometerWindow::CronometerWindow(QWidget *parent)
     loadSettings();
     
     // Initialize database with the path from settings
-    chronoDb = DBManager(dbPath);
+    chronoDb = DBManager(m_dbPath);
     
     ui->setupUi(this);
     
@@ -49,34 +49,34 @@ CronometerWindow::CronometerWindow(QWidget *parent)
     // Open the database
     if (!chronoDb.open()) {
         QMessageBox::critical(this, "Database Error", 
-            QString("Failed to open database: %1").arg(dbPath));
+            QString("Failed to open database: %1").arg(m_dbPath));
     }
     
     // Initialize state
-    started = false;
-    startTime = Utils::DateTimeUtils::now();
-    currentTrialId = -1; // Will be set when starting a trial
+    m_started = false;
+    m_startTime = Utils::DateTimeUtils::now();
+    m_currentTrialId = -1; // Will be set when starting a trial
     
-    setControlsStatus(started);
+    setControlsStatus(m_started);
     updateCounterTimer();
     
     ui->btnRegister->setEnabled(false);
 
-    connect(&timer, &QTimer::timeout, this, &CronometerWindow::updateCounterTimer);
+    connect(&m_timer, &QTimer::timeout, this, &CronometerWindow::updateCounterTimer);
     connect(ui->edtPlaque, &QLineEdit::textChanged, this, &CronometerWindow::updateRegisterButton);
     
     // Configure timer to update the state of the Start button
-    connect(&startButtonUpdateTimer, &QTimer::timeout, this, &CronometerWindow::updateStartButtonState);
-    startButtonUpdateTimer.start(60000); // Update every minute
+    connect(&m_startButtonUpdateTimer, &QTimer::timeout, this, &CronometerWindow::updateStartButtonState);
+    m_startButtonUpdateTimer.start(60000); // Update every minute
     
     // Connect Exit menu directly to close()
-    QAction* exitAction = findChild<QAction*>("actionExit");
+    auto* exitAction = findChild<QAction*>("actionExit");
     if (exitAction) {
         connect(exitAction, &QAction::triggered, this, &QWidget::close);
     }
     
     // Initialize events submenu
-    eventsSubmenu = nullptr;
+    m_eventsSubmenu = nullptr;
 
     // close open events with scheduled datetime < NOW() - DAYS(openTrialWindowDays)
     closeOpenedEvents();
@@ -92,7 +92,7 @@ CronometerWindow::~CronometerWindow() {
     delete ui;
 }
 
-void CronometerWindow::setControlsStatus(const bool status) {
+void CronometerWindow::setControlsStatus(const bool status) const {
     ui->edtPlaque->setEnabled(status);
     ui->btnStart->setText(!status ? "Start" : "Stop");
 }
@@ -100,30 +100,28 @@ void CronometerWindow::setControlsStatus(const bool status) {
 void CronometerWindow::on_btnStart_clicked() {
     Trials::Repository trialsRepo(chronoDb.database());
 
-    if (started) {
-        auto reply = QMessageBox::question(this, "Confirmation", "You really want to stop?", QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::No)
+    if (m_started) {
+        if (auto reply = QMessageBox::question(this, "Confirmation", "You really want to stop?", QMessageBox::Yes | QMessageBox::No); reply == QMessageBox::No)
             return;
     }
 
-    started = !started;
+    m_started = !m_started;
     
     // Update menus state
     updateMenusState();
 
-    if (started) {
+    if (m_started) {
         // Check if there are existing results before starting
         Results::Repository resultsRepo(chronoDb.database());
-        auto existingResultsCheck = resultsRepo.getResultsByTrial(currentTrialId);
-        
-        if (existingResultsCheck.has_value() && !existingResultsCheck.value().isEmpty()) {
+
+        if (auto existingResultsCheck = resultsRepo.getResultsByTrial(m_currentTrialId); existingResultsCheck.has_value() && !existingResultsCheck.value().isEmpty()) {
             auto reply = QMessageBox::question(this, "Existing Results", 
                 QString("There are %1 existing results for this trial.\n\nDo you want to remove all previous results and start fresh?")
                     .arg(existingResultsCheck.value().size()),
                 QMessageBox::Yes | QMessageBox::No);
                 
             if (reply == QMessageBox::No) {
-                started = false; // Reverter estado
+                m_started = false; // Reverter estado
                 updateMenusState();
                 return;
             }
@@ -131,24 +129,22 @@ void CronometerWindow::on_btnStart_clicked() {
             // Delete all existing results
             const auto& existingResults = existingResultsCheck.value();
             for (const auto& result : existingResults) {
-                auto deleteResult = resultsRepo.deleteResultById(result.id);
-                if (!deleteResult.has_value()) {
+                if (auto deleteResult = resultsRepo.deleteResultById(result.id); !deleteResult.has_value()) {
                     QMessageBox::warning(this, "Error",
                                          QString("Failed to delete result ID %1: %2").arg(QString::number(result.id), deleteResult.error()));
                 }
             }
-            qDebug() << "Deleted" << existingResults.size() << "existing results for trial" << currentTrialId;
+            qDebug() << "Deleted" << existingResults.size() << "existing results for trial" << m_currentTrialId;
         }
         
-        startTime = Utils::DateTimeUtils::now();
+        m_startTime = Utils::DateTimeUtils::now();
         startCounterTimer();
-        qDebug() << "Started trial:" << selectedEventName << "with ID:" << currentTrialId;
+        qDebug() << "Started trial:" << m_selectedEventName << "with ID:" << m_currentTrialId;
 
         // Create struct with only the field we want to update
         Trials::TrialInfo updateInfo;
-        updateInfo.startDateTime = startTime;
-        auto startedTrial = trialsRepo.updateTrialById(currentTrialId, updateInfo);
-        if (startedTrial.has_value()) {
+        updateInfo.startDateTime = m_startTime;
+        if (auto startedTrial = trialsRepo.updateTrialById(m_currentTrialId, updateInfo); startedTrial.has_value()) {
             qDebug() << "Saved trial :" << startedTrial.value().name << " at " << startedTrial.value().startDateTime;
         } else {
             qFatal("Error saving trial: %s", startedTrial.error().toLocal8Bit().constData());
@@ -156,15 +152,14 @@ void CronometerWindow::on_btnStart_clicked() {
     } else {
         stopCounterTimer();
         ui->btnRegister->setEnabled(false);
-        qDebug() << "Finalizing trial with ID:" << currentTrialId;
+        qDebug() << "Finalizing trial with ID:" << m_currentTrialId;
         
         // Finalize trial by setting endDateTime
         QDateTime endTime = Utils::DateTimeUtils::now();
         Trials::TrialInfo updateInfo;
         updateInfo.endDateTime = endTime;
-        
-        auto finishedTrial = trialsRepo.updateTrialById(currentTrialId, updateInfo);
-        if (finishedTrial.has_value()) {
+
+        if (auto finishedTrial = trialsRepo.updateTrialById(m_currentTrialId, updateInfo); finishedTrial.has_value()) {
             qDebug() << "Trial finished:" << finishedTrial.value().name 
                      << "End time:" << finishedTrial.value().endDateTime;
         } else {
@@ -173,16 +168,17 @@ void CronometerWindow::on_btnStart_clicked() {
         }
     }
 
-    setControlsStatus(started);
+    setControlsStatus(m_started);
 }
 
 void CronometerWindow::closeEvent(QCloseEvent *event) {
-    if(!started) {
+    if(!m_started) {
         event->accept();
     } else {
-        auto reply = QMessageBox::question(this, "Trial in Progress", "A trial is currently running. Do you want to stop it and exit?", QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
-            started = false;
+        if (const auto reply =
+                QMessageBox::question(this, "Trial in Progress", "A trial is currently running. Do you want to stop it and exit?",
+                    QMessageBox::Yes | QMessageBox::No); reply == QMessageBox::Yes) {
+            m_started = false;
             stopCounterTimer();
             event->accept();
         } else {
@@ -192,37 +188,37 @@ void CronometerWindow::closeEvent(QCloseEvent *event) {
 }
 
 void CronometerWindow::startCounterTimer() {
-    timer.start(1000); // update every 1s
+    m_timer.start(1000); // update every 1s
 }
 
 void CronometerWindow::stopCounterTimer() {
-    timer.stop();
+    m_timer.stop();
 }
 
-void CronometerWindow::updateCounterTimer() {
-    int secs = startTime.secsTo(Utils::DateTimeUtils::now());
+void CronometerWindow::updateCounterTimer() const {
+    const int secs = static_cast<int>(m_startTime.secsTo(Utils::DateTimeUtils::now()));
     QTime display(0, 0);
     display = display.addSecs(secs);
 
     ui->lblTime->setText(display.toString(timeFormat));
 }
 
-void CronometerWindow::updateRegisterButton() {
+void CronometerWindow::updateRegisterButton() const {
     bool hasPlaque = !ui->edtPlaque->text().trimmed().isEmpty();
-    ui->btnRegister->setEnabled(started && hasPlaque);
+    ui->btnRegister->setEnabled(m_started && hasPlaque);
 }
 
 void CronometerWindow::on_btnRegister_clicked() {
-    if (!started || currentTrialId == -1) {
+    if (!m_started || m_currentTrialId == -1) {
         QMessageBox::warning(this, "Warning", "No active trial. Please start a trial first.");
         return;
     }
     
     QStringList placas = ui->edtPlaque->text().split(",", Qt::SkipEmptyParts);
-    std::transform(placas.begin(), placas.end(), placas.begin(), [](const QString &s){ return s.trimmed(); });
+    std::ranges::transform(placas, placas.begin(), [](const QString &s){ return s.trimmed(); });
     
     QDateTime curTime = Utils::DateTimeUtils::now();
-    int durationMs = startTime.msecsTo(curTime);
+    int durationMs = static_cast<int>(m_startTime.msecsTo(curTime));
 
     int registered = 0;
     int errors = 0;
@@ -234,7 +230,7 @@ void CronometerWindow::on_btnRegister_clicked() {
 
         for(const auto& placa : placas) {
             // Search for participant registration by plate number
-            auto registrationResult = registrationsRepo.getRegistrationByPlateCode(currentTrialId, placa);
+            auto registrationResult = registrationsRepo.getRegistrationByPlateCode(m_currentTrialId, placa);
             
             if (!registrationResult.has_value()) {
                 errorMessages.append(QString("Placa %1: %2").arg(placa, registrationResult.error()));
@@ -250,7 +246,7 @@ void CronometerWindow::on_btnRegister_clicked() {
             
             auto resultCreated = resultsRepo.createResult(
                 registration.id,
-                startTime,
+                m_startTime,
                 curTime,
                 durationMs,
                 note
@@ -305,17 +301,16 @@ void CronometerWindow::on_btnRegister_clicked() {
     // Results registered successfully (no automatic report generation)
 }
 
-void CronometerWindow::generateReport() {
-    if (currentTrialId == -1) {
+void CronometerWindow::generateReport() const {
+    if (m_currentTrialId == -1) {
         return;
     }
     
     // Define report file name
-    QString defaultFileName = QString("report_%1_%2.xlsx")
-                                .arg(selectedEventName)
-                                .arg(QDate::currentDate().toString("yyyy-MM-dd"));
+    const QString defaultFileName = QString("report_%1_%2.xlsx")
+                                .arg(m_selectedEventName, QDate::currentDate().toString("yyyy-MM-dd"));
     
-    QString defaultFilePath = QDir(reportPath).filePath(defaultFileName);
+    QString defaultFilePath = QDir(m_reportPath).filePath(defaultFileName);
     
     QString fileName = defaultFilePath;
     
@@ -324,14 +319,14 @@ void CronometerWindow::generateReport() {
     }
     
     // Generate the report
-    if (!Report::exportExcel(currentTrialId, fileName, chronoDb.database())) {
+    if (!Report::exportExcel(m_currentTrialId, fileName, chronoDb.database())) {
         statusBar()->showMessage("✗ Error generating Excel report", 5000);
         statusBar()->setStyleSheet("QStatusBar { background-color: #f8d7da; color: #721c24; }");
     }
 }
 
 void CronometerWindow::on_actionGenerate_Excel_triggered() {
-    if (currentTrialId <= 0) {
+    if (m_currentTrialId <= 0) {
         QMessageBox::warning(this, "No Event Selected", 
             "Select an event before generating the Excel report.");
         return;
@@ -345,8 +340,8 @@ void CronometerWindow::on_actionGenerate_Excel_triggered() {
 
 void CronometerWindow::loadTodayTrial() {
     try {
-        Trials::Repository trialsRepo(chronoDb.database());
-        QDate today = QDate::currentDate();
+        const Trials::Repository trialsRepo(chronoDb.database());
+        const QDate today = QDate::currentDate();
         
         auto trialsResult = trialsRepo.getTrialsByDate(today);
         
@@ -365,11 +360,10 @@ void CronometerWindow::loadTodayTrial() {
         
         // Get the first trial of the day (can be improved to choose the closest to the current time)
         const auto& selectedTrial = todayTrials.first();
-        currentTrialId = selectedTrial.id;
-        
-        QString windowTitle = QString("%1 (Scheduled: %2)")
-                                .arg(selectedTrial.name)
-                                .arg(selectedTrial.scheduledDateTime.toString(eventMenuTimeFormat));
+        m_currentTrialId = selectedTrial.id;
+
+        const QString windowTitle = QString("%1 (Scheduled: %2)")
+                                .arg(selectedTrial.name, selectedTrial.scheduledDateTime.toString(eventMenuTimeFormat));
         
         setWindowTitle(windowTitle);
         
@@ -382,14 +376,12 @@ void CronometerWindow::loadTodayTrial() {
             QStringList trialNames;
             for (const auto& trial : todayTrials) {
                 trialNames << QString("%1 (%2)")
-                              .arg(trial.name)
-                              .arg(trial.scheduledDateTime.toString("hh:mm"));
+                              .arg(trial.name, trial.scheduledDateTime.toString("hh:mm"));
             }
             
             QMessageBox::information(this, "Multiple Trials Today", 
                 QString("Multiple trials scheduled for today:\n\n%1\n\nSelected: %2")
-                    .arg(trialNames.join("\n"))
-                    .arg(selectedTrial.name));
+                    .arg(trialNames.join("\n"), selectedTrial.name));
         }
         
     } catch (const std::exception& e) {
@@ -416,53 +408,52 @@ void CronometerWindow::loadSettings() {
     
     // Load database settings
     settings.beginGroup("Database");
-    QString relativePath = settings.value("Path", "chronometer.db").toString();
+    const QString relativePath = settings.value("Path", "chronometer.db").toString();
     settings.setValue("Path", relativePath);
     settings.endGroup();
     
     // Build full path using the project root
     if (QDir::isRelativePath(relativePath)) {
-        dbPath = projectRoot + "/" + relativePath;
+        m_dbPath = projectRoot + "/" + relativePath;
     } else {
-        dbPath = relativePath; // If absolute, use as is
+        m_dbPath = relativePath; // If absolute, use as is
     }
     
     // Load report settings
     settings.beginGroup("Reports");
-    QString relativeReportPath = settings.value("OutputPath", "reports").toString();
+    const QString relativeReportPath = settings.value("OutputPath", "reports").toString();
     settings.setValue("OutputPath", relativeReportPath);
     settings.endGroup();
     
     // Build full path for reports
     if (QDir::isRelativePath(relativeReportPath)) {
-        reportPath = projectRoot + "/" + relativeReportPath;
+        m_reportPath = projectRoot + "/" + relativeReportPath;
     } else {
-        reportPath = relativeReportPath; // If absolute, use as is
+        m_reportPath = relativeReportPath; // If absolute, use as is
     }
     
     // Create reports directory if it doesn't exist
-    QDir reportDir(reportPath);
-    if (!reportDir.exists()) {
+    if (QDir reportDir(m_reportPath); !reportDir.exists()) {
         reportDir.mkpath(".");
-        qDebug() << "Created reports directory:" << reportPath;
+        qDebug() << "Created reports directory:" << m_reportPath;
     }
 
     // read OpenTrialWindowDays
     settings.beginGroup("General");
     // Other settings can be loaded here in the future
-    openTrialWindowDays = settings.value("OpenTrialWindowDays", "2").toInt();
+    m_openTrialWindowDays = settings.value("OpenTrialWindowDays", "2").toInt();
     settings.endGroup();
 
     
     // Log loaded configuration
     qDebug() << "Project root detected:" << projectRoot;
-    qDebug() << "Database path resolved to:" << dbPath;
-    qDebug() << "Reports path resolved to:" << reportPath;
+    qDebug() << "Database path resolved to:" << m_dbPath;
+    qDebug() << "Reports path resolved to:" << m_reportPath;
 }
 
 void CronometerWindow::loadEventsToMenu() {
     try {
-        Trials::Repository trialsRepo(chronoDb.database());
+        const Trials::Repository trialsRepo(chronoDb.database());
         
         auto trialsResult = trialsRepo.getAllTrials();
         
@@ -471,13 +462,13 @@ void CronometerWindow::loadEventsToMenu() {
             return;
         }
         
-        loadedEvents = trialsResult.value();
+        m_loadedEvents = trialsResult.value();
         
         // Criar ou limpar submenu
-        if (eventsSubmenu) {
-            eventsSubmenu->clear();
+        if (m_eventsSubmenu) {
+            m_eventsSubmenu->clear();
         } else {
-            eventsSubmenu = new QMenu("Select Event", this);
+            m_eventsSubmenu = new QMenu("Select Event", this);
             
             // Encontrar a ação "List Events" no menu e adicionar o submenu
             QMenu* eventMenu = nullptr;
@@ -490,38 +481,38 @@ void CronometerWindow::loadEventsToMenu() {
             
             if (eventMenu) {
                 eventMenu->addSeparator();
-                eventMenu->addMenu(eventsSubmenu);
+                eventMenu->addMenu(m_eventsSubmenu);
             }
         }
         
         // Load previously selected event from settings
         QSettings settings("settings.ini", QSettings::IniFormat);
         settings.beginGroup("General");
-        QString previouslySelected = settings.value("SelectedEvent", "").toString();
-        int previouslySelectedId = settings.value("SelectedEventId", -1).toInt();
+        const QString previouslySelected = settings.value("SelectedEvent", "").toString();
+        const int previouslySelectedId = settings.value("SelectedEventId", -1).toInt();
         settings.endGroup();
         
         // Add events to submenu
         ui->btnStart->setEnabled(false);
-        if (loadedEvents.isEmpty()) {
-            QAction* noEventsAction = eventsSubmenu->addAction("No events available");
+        if (m_loadedEvents.isEmpty()) {
+            QAction* noEventsAction = m_eventsSubmenu->addAction("No events available");
             noEventsAction->setEnabled(false);
         } else {
-            for (const auto& trial : loadedEvents) {
+            for (const auto& trial : m_loadedEvents) {
                 QString actionText = QString("%1").arg(trial.name);
                 if (trial.scheduledDateTime.isValid()) {
                     actionText += QString(" (%1)").arg(trial.scheduledDateTime.toString(eventMenuTimeFormat));
                 }
                 
-                QAction* eventAction = eventsSubmenu->addAction(actionText);
+                QAction* eventAction = m_eventsSubmenu->addAction(actionText);
                 eventAction->setData(trial.id); // Armazenar ID do trial
                 eventAction->setCheckable(true);
                 
                 // Restaurar seleção anterior se existir
                 if (trial.id == previouslySelectedId && !previouslySelected.isEmpty()) {
                     eventAction->setChecked(true);
-                    currentTrialId = trial.id;
-                    selectedEventName = trial.name;
+                    m_currentTrialId = trial.id;
+                    m_selectedEventName = trial.name;
                     
                     QString windowTitle = trial.name;
                     if (trial.scheduledDateTime.isValid()) {
@@ -541,7 +532,7 @@ void CronometerWindow::loadEventsToMenu() {
             }
         }
         
-        qDebug() << "Loaded" << loadedEvents.size() << "events to submenu";
+        qDebug() << "Loaded" << m_loadedEvents.size() << "events to submenu";
         
         // Update menus state after loading events
         updateMenusState();
@@ -554,11 +545,11 @@ void CronometerWindow::loadEventsToMenu() {
 }
 
 void CronometerWindow::onEventSelected() {
-    QAction* senderAction = qobject_cast<QAction*>(sender());
+    auto* senderAction = qobject_cast<QAction*>(sender());
     if (!senderAction) return;
     
     // Do not allow changing trial if the timer is running
-    if (started) {
+    if (m_started) {
         QMessageBox::warning(this, "Trial Running", 
             "You cannot change the event while the timer is running.\n\nStop the timer before selecting another event.");
         return;
@@ -567,19 +558,19 @@ void CronometerWindow::onEventSelected() {
     int selectedTrialId = senderAction->data().toInt();
     
     // Find the selected trial
-    auto it = std::find_if(loadedEvents.begin(), loadedEvents.end(),
-                          [selectedTrialId](const Trials::TrialInfo& trial) {
-                              return trial.id == selectedTrialId;
-                          });
+    const auto it = std::ranges::find_if(m_loadedEvents,
+                                   [selectedTrialId](const Trials::TrialInfo& trial) {
+                                       return trial.id == selectedTrialId;
+                                   });
     
-    if (it != loadedEvents.end()) {
+    if (it != m_loadedEvents.end()) {
         const auto& selectedTrial = *it;
-        currentTrialId = selectedTrialId;
-        selectedEventName = selectedTrial.name; // Save event name
+        m_currentTrialId = selectedTrialId;
+        m_selectedEventName = selectedTrial.name; // Save event name
         
         // Uncheck all actions in the submenu
-        if (eventsSubmenu) {
-            for (QAction* action : eventsSubmenu->actions()) {
+        if (m_eventsSubmenu) {
+            for (QAction* action : m_eventsSubmenu->actions()) {
                 action->setCheckable(true);
                 action->setChecked(false);
             }
@@ -598,7 +589,7 @@ void CronometerWindow::onEventSelected() {
         setWindowTitle(windowTitle);
         
         qDebug() << "Event selected:" << selectedTrial.name << "ID:" << selectedTrialId;
-        qDebug() << "Selected event name saved:" << selectedEventName;
+        qDebug() << "Selected event name saved:" << m_selectedEventName;
 
         // Update initial state of the Start button
         updateStartButtonState();
@@ -606,7 +597,7 @@ void CronometerWindow::onEventSelected() {
         // Save the selection in settings to persist between sessions
         QSettings settings("settings.ini", QSettings::IniFormat);
         settings.beginGroup("General");
-        settings.setValue("SelectedEvent", selectedEventName);
+        settings.setValue("SelectedEvent", m_selectedEventName);
         settings.setValue("SelectedEventId", selectedTrialId);
         settings.endGroup();
         
@@ -622,8 +613,7 @@ void CronometerWindow::on_actionCreate_New_Event_triggered()
         
         // Load existing events for autocomplete
         Trials::Repository trialsRepo(chronoDb.database());
-        auto existingTrialsResult = trialsRepo.getAllTrials();
-        if (existingTrialsResult.has_value()) {
+        if (auto existingTrialsResult = trialsRepo.getAllTrials(); existingTrialsResult.has_value()) {
             QStringList existingEventNames;
             for (const auto& trial : existingTrialsResult.value()) {
                 if (!trial.name.isEmpty()) {
@@ -633,8 +623,7 @@ void CronometerWindow::on_actionCreate_New_Event_triggered()
             newEventDialog.setExistingEventNames(existingEventNames);
         }
 
-        auto status = newEventDialog.exec();
-        if (status == QDialog::Accepted) {
+        if (auto status = newEventDialog.exec(); status == QDialog::Accepted) {
             QString eventName = newEventDialog.getEventName();
             QDateTime startTime = newEventDialog.getEventStartTime();
 
@@ -678,9 +667,9 @@ void CronometerWindow::on_actionCreate_New_Event_triggered()
             loadEventsToMenu();
             
             // Select the newly created/updated event only if the timer is not running
-            if (eventId != -1 && !started) {
+            if (eventId != -1 && !m_started) {
                 selectEventById(eventId);
-            } else if (started) {
+            } else if (m_started) {
                 QMessageBox::information(this, "Event Created", 
                     QString("Event '%1' created successfully!\n\nSince the timer is running, the current event was not changed.").arg(eventName));
             }
@@ -696,30 +685,30 @@ void CronometerWindow::on_actionCreate_New_Event_triggered()
 void CronometerWindow::selectEventById(int eventId)
 {
     try {
-        if (!eventsSubmenu) {
+        if (!m_eventsSubmenu) {
             qWarning() << "Events submenu not initialized";
             return;
         }
         
         // Uncheck all actions first
-        for (QAction* action : eventsSubmenu->actions()) {
+        for (QAction* action : m_eventsSubmenu->actions()) {
             action->setChecked(false);
         }
         
         // Find and select the action corresponding to eventId
-        for (QAction* action : eventsSubmenu->actions()) {
+        for (QAction* action : m_eventsSubmenu->actions()) {
             if (action->data().toInt() == eventId) {
                 action->setChecked(true);
                 
                 // Find the corresponding trial to update the window title
-                auto it = std::find_if(loadedEvents.begin(), loadedEvents.end(),
-                                      [eventId](const Trials::TrialInfo& trial) {
-                                          return trial.id == eventId;
-                                      });
+                const auto it = std::ranges::find_if(m_loadedEvents,
+                                                     [eventId](const Trials::TrialInfo& trial) {
+                                                         return trial.id == eventId;
+                                                     });
                 
-                if (it != loadedEvents.end()) {
-                    currentTrialId = it->id;
-                    selectedEventName = it->name;
+                if (it != m_loadedEvents.end()) {
+                    m_currentTrialId = it->id;
+                    m_selectedEventName = it->name;
                     
                     QString windowTitle = it->name;
                     if (it->scheduledDateTime.isValid()) {
@@ -749,20 +738,19 @@ void CronometerWindow::selectEventById(int eventId)
 
 void CronometerWindow::on_actionShow_triggered()
 {
-    if (currentTrialId <= 0) {
+    if (m_currentTrialId <= 0) {
         // Try to load today's event if none is selected
         loadTodayTrial();
         
-        if (currentTrialId <= 0) {
-            QMessageBox::StandardButton reply = QMessageBox::question(this, "No Active Event", 
-
+        if (m_currentTrialId <= 0) {
+            const QMessageBox::StandardButton reply = QMessageBox::question(this, "No Active Event",
                 "No event is selected. Do you want to see participants of a specific event?",
                 QMessageBox::Yes | QMessageBox::No);
                 
             if (reply == QMessageBox::Yes) {
                 // Show list of events to choose from
                 showEventSelectionDialog();
-                if (currentTrialId <= 0) {
+                if (m_currentTrialId <= 0) {
                     return; // User canceled or did not select anything
                 }
             } else {
@@ -772,8 +760,8 @@ void CronometerWindow::on_actionShow_triggered()
     }
     
     try {
-        Trials::Repository trialsRepo(chronoDb.database());
-        auto trialResult = trialsRepo.getTrialById(currentTrialId);
+        const Trials::Repository trialsRepo(chronoDb.database());
+        auto trialResult = trialsRepo.getTrialById(m_currentTrialId);
         
         if (!trialResult.has_value() || trialResult.value().name.isEmpty()) {
             QMessageBox::warning(this, "Erro", "Erro ao carregar informações do evento atual.");
@@ -794,19 +782,18 @@ void CronometerWindow::on_actionLoad_from_file_triggered()
 {
     try {
         // Do not allow importing participants if the timer is running
-        if (started) {
+        if (m_started) {
             QMessageBox::warning(this, "Timer Running", 
                 "It is not possible to import participants while the timer is running.\n\nStop the timer before importing participants.");
             return;
         }
         
         // Check if there is a selected trial and if it already has participants
-        if (currentTrialId > 0) {
-            Registrations::Repository registrationsRepo(chronoDb.database());
-            auto existingRegistrations = registrationsRepo.getRegistrationsByTrial(currentTrialId);
-            
-            if (existingRegistrations.has_value() && !existingRegistrations.value().isEmpty()) {
-                auto reply = QMessageBox::question(this, "Existing Participants", 
+        if (m_currentTrialId > 0) {
+            const Registrations::Repository registrationsRepo(chronoDb.database());
+
+            if (auto existingRegistrations = registrationsRepo.getRegistrationsByTrial(m_currentTrialId); existingRegistrations.has_value() && !existingRegistrations.value().isEmpty()) {
+                const auto reply = QMessageBox::question(this, "Existing Participants",
                     QString("The current event already has %1 participant(s) registered.\n\nImporting new participants may cause conflicts.\n\nDo you want to continue anyway?")
                     .arg(existingRegistrations.value().size()),
                     QMessageBox::Yes | QMessageBox::No);
@@ -816,8 +803,8 @@ void CronometerWindow::on_actionLoad_from_file_triggered()
                 }
             }
         }
-        
-        Trials::Repository trialsRepo(chronoDb.database());
+
+        const Trials::Repository trialsRepo(chronoDb.database());
         auto trialsResult = trialsRepo.getAllTrials();
         
         if (!trialsResult.has_value()) {
@@ -828,8 +815,8 @@ void CronometerWindow::on_actionLoad_from_file_triggered()
         LoadParticipantsWindow loadDialog(chronoDb, this);
         
         // Set active trial ID if there's one selected
-        if (currentTrialId > 0) {
-            loadDialog.setActiveTrialId(currentTrialId);
+        if (m_currentTrialId > 0) {
+            loadDialog.setActiveTrialId(m_currentTrialId);
         }
         
         loadDialog.setAvailableTrials(trialsResult.value());
@@ -850,7 +837,7 @@ void CronometerWindow::on_actionLoad_from_file_triggered()
 void CronometerWindow::showEventSelectionDialog()
 {
     try {
-        Trials::Repository trialsRepo(chronoDb.database());
+        const Trials::Repository trialsRepo(chronoDb.database());
         auto trialsResult = trialsRepo.getAllTrials();
         
         if (!trialsResult.has_value() || trialsResult.value().isEmpty()) {
@@ -863,28 +850,25 @@ void CronometerWindow::showEventSelectionDialog()
         
         for (const auto& trial : trialsResult.value()) {
             QString displayText = QString("%1 - %2")
-                                .arg(trial.name)
-                                .arg(trial.scheduledDateTime.toString("dd/MM/yyyy hh:mm"));
+                                .arg(trial.name, trial.scheduledDateTime.toString( eventMenuTimeFormat));
             eventNames.append(displayText);
             eventIds.append(trial.id);
         }
         
         bool ok;
-        QString selectedEvent = QInputDialog::getItem(this, 
+        const QString selectedEvent = QInputDialog::getItem(this,
             "Select Event", 
             "Choose the event to view participants:",
             eventNames, 0, false, &ok);
             
         if (ok && !selectedEvent.isEmpty()) {
-            int selectedIndex = eventNames.indexOf(selectedEvent);
-            if (selectedIndex >= 0) {
-                currentTrialId = eventIds[selectedIndex];
+            if (int selectedIndex = static_cast<int>(eventNames.indexOf(selectedEvent)); selectedIndex >= 0) {
+                m_currentTrialId = eventIds[selectedIndex];
                 
                 // Update window title
                 const auto& selectedTrial = trialsResult.value()[selectedIndex];
-                QString windowTitle = QString("%1 (Scheduled: %2)")
-                                    .arg(selectedTrial.name)
-                                    .arg(selectedTrial.scheduledDateTime.toString(eventMenuTimeFormat));
+                const QString windowTitle = QString("%1 (Scheduled: %2)")
+                                    .arg(selectedTrial.name, selectedTrial.scheduledDateTime.toString(eventMenuTimeFormat));
                 setWindowTitle(windowTitle);
             }
         }
@@ -895,7 +879,7 @@ void CronometerWindow::showEventSelectionDialog()
     }
 }
 
-void CronometerWindow::closeOpenedEvents() {
+void CronometerWindow::closeOpenedEvents() const {
     try {
         Trials::Repository trialRepository(chronoDb.database());
 
@@ -905,31 +889,31 @@ void CronometerWindow::closeOpenedEvents() {
             return;
         }
 
-        auto limitDate = QDate::currentDate().addDays(-openTrialWindowDays);
+        auto limitDate = QDate::currentDate().addDays(-m_openTrialWindowDays);
 
         const auto epochZero = Utils::DateTimeUtils::epochZero();
         const auto now = Utils::DateTimeUtils::now();
         
         // Filter trials that need to be closed and process each one
-        std::for_each(trials.value().begin(), trials.value().end(), 
-            [&limitDate, &epochZero, &now, &trialRepository](auto& trial) {
-                // Check if the trial meets the criteria to be closed:
-                // 1. scheduledDateTime < limitDate (trial too old)
-                // 2. endDateTime == epoch zero (not yet finished)
-                if (trial.scheduledDateTime.date() < limitDate && trial.endDateTime == epochZero) {
+        std::ranges::for_each(trials.value(),
+                              [&limitDate, &epochZero, &now, &trialRepository](auto& trial) {
+                                  // Check if the trial meets the criteria to be closed:
+                                  // 1. scheduledDateTime < limitDate (trial too old)
+                                  // 2. endDateTime == epoch zero (not yet finished)
+                                  if (trial.scheduledDateTime.date() < limitDate && trial.endDateTime == epochZero) {
                     
-                    // If not yet started, set start time to now
-                    if (trial.startDateTime == epochZero) {
-                        trial.startDateTime = now;
-                    }
+                                      // If not yet started, set start time to now
+                                      if (trial.startDateTime == epochZero) {
+                                          trial.startDateTime = now;
+                                      }
                     
-                    // Finish the trial
-                    trial.endDateTime = now;
+                                      // Finish the trial
+                                      trial.endDateTime = now;
                     
-                    // Update in the database
-                    (void)trialRepository.updateTrialById(trial.id, trial);
-                }
-            });
+                                      // Update in the database
+                                      (void)trialRepository.updateTrialById(trial.id, trial);
+                                  }
+                              });
 
 
     } catch (const std::exception& e) {
@@ -939,9 +923,9 @@ void CronometerWindow::closeOpenedEvents() {
 
 void CronometerWindow::checkAndStartRunningTrial() {
     try {
-        Trials::Repository trialsRepo(chronoDb.database());
+        const Trials::Repository trialsRepo(chronoDb.database());
         
-        auto runningTrialResult = trialsRepo.getRunningTrial(openTrialWindowDays);
+        auto runningTrialResult = trialsRepo.getRunningTrial(m_openTrialWindowDays);
         
         if (!runningTrialResult.has_value()) {
             qDebug() << "Error checking running trial:" << runningTrialResult.error();
@@ -957,15 +941,15 @@ void CronometerWindow::checkAndStartRunningTrial() {
         const auto& runningTrial = runningTrialOptional.value();
         
         // Set the current trial
-        currentTrialId = runningTrial.id;
-        selectedEventName = runningTrial.name;
+        m_currentTrialId = runningTrial.id;
+        m_selectedEventName = runningTrial.name;
         
         // Set the chronometer with the trial's startDateTime
-        startTime = runningTrial.startDateTime;
-        started = true;
+        m_startTime = runningTrial.startDateTime;
+        m_started = true;
         
         // Update interface
-        setControlsStatus(started);
+        setControlsStatus(m_started);
         ui->btnStart->setEnabled(true);  // Enable button to allow finishing the trial
         startCounterTimer();
         
@@ -974,8 +958,8 @@ void CronometerWindow::checkAndStartRunningTrial() {
         setWindowTitle(windowTitle);
         
         // Mark event as selected in the menu
-        if (eventsSubmenu) {
-            for (QAction* action : eventsSubmenu->actions()) {
+        if (m_eventsSubmenu) {
+            for (QAction* action : m_eventsSubmenu->actions()) {
                 if (action->data().toInt() == runningTrial.id) {
                     action->setChecked(true);
                     break;
@@ -988,9 +972,8 @@ void CronometerWindow::checkAndStartRunningTrial() {
                  << "Started at:" << runningTrial.startDateTime;
                  
         // Show notification to the user
-        QString message = QString("Chronometer automatically resumed for trial: %1\nStarted at: %2")
-                           .arg(runningTrial.name)
-                           .arg(runningTrial.startDateTime.toString("dd/MM/yyyy hh:mm:ss"));
+        const QString message = QString("Chronometer automatically resumed for trial: %1\nStarted at: %2")
+                           .arg(runningTrial.name, runningTrial.startDateTime.toString(eventMenuTimeFormat));
         
         QMessageBox::information(this, "Trial Resumed", message);
         
@@ -1004,14 +987,14 @@ void CronometerWindow::checkAndStartRunningTrial() {
     }
 }
 
-void CronometerWindow::updateMenusState() {
+void CronometerWindow::updateMenusState() const {
     // Disable event selection if the chronometer is running
-    if (eventsSubmenu) {
-        eventsSubmenu->setEnabled(!started);
+    if (m_eventsSubmenu) {
+        m_eventsSubmenu->setEnabled(!m_started);
     }
     
     // Find the "Event" menu and disable "Load from file" if necessary
-    QMenu* eventMenu = nullptr;
+    const QMenu* eventMenu = nullptr;
     for (QMenu* menu : findChildren<QMenu*>()) {
         if (menu->title() == "Event") {
             eventMenu = menu;
@@ -1025,10 +1008,10 @@ void CronometerWindow::updateMenusState() {
             if (action->text().contains("Load from file")) {
                 // Check if there are participants in the current trial
                 bool hasParticipants = false;
-                if (currentTrialId > 0) {
+                if (m_currentTrialId > 0) {
                     try {
-                        Registrations::Repository registrationsRepo(chronoDb.database());
-                        auto existingRegistrations = registrationsRepo.getRegistrationsByTrial(currentTrialId);
+                        const Registrations::Repository registrationsRepo(chronoDb.database());
+                        auto existingRegistrations = registrationsRepo.getRegistrationsByTrial(m_currentTrialId);
                         hasParticipants = existingRegistrations.has_value() && !existingRegistrations.value().isEmpty();
                     } catch (...) {
                         // In case of error, keep enabled
@@ -1036,11 +1019,11 @@ void CronometerWindow::updateMenusState() {
                 }
                 
                 // Disable if running or if there are already participants
-                action->setEnabled(!started && !hasParticipants);
+                action->setEnabled(!m_started && !hasParticipants);
                 
                 if (hasParticipants) {
                     action->setToolTip("Import desabilitado: o evento atual já possui participantes cadastrados");
-                } else if (started) {
+                } else if (m_started) {
                     action->setToolTip("Import desabilitado: cronômetro em execução");
                 } else {
                     action->setToolTip("Importar participantes de arquivo Excel");
@@ -1051,8 +1034,7 @@ void CronometerWindow::updateMenusState() {
     }
     
     // Control "Reports" menu -> Generate Excel
-    QAction* generateExcelAction = findChild<QAction*>("actionGenerate_Excel");
-    if (generateExcelAction) {
+    if (auto* generateExcelAction = findChild<QAction*>("actionGenerate_Excel")) {
         bool canGenerate = canGenerateReport();
         generateExcelAction->setEnabled(canGenerate);
         
@@ -1064,12 +1046,12 @@ void CronometerWindow::updateMenusState() {
     }
 }
 
-bool CronometerWindow::canStartEvent(const QDateTime& scheduledDateTime) const {
+bool CronometerWindow::canStartEvent(const QDateTime& scheduledDateTime) {
     if (!scheduledDateTime.isValid()) {
         return false;
     }
-    
-    QDateTime currentDateTime = QDateTime::currentDateTime();
+
+    const QDateTime currentDateTime = QDateTime::currentDateTime();
     
     // Check if the event is today
     if (scheduledDateTime.date() != currentDateTime.date()) {
@@ -1077,7 +1059,7 @@ bool CronometerWindow::canStartEvent(const QDateTime& scheduledDateTime) const {
     }
     
     // Check if less than 1 hour remains until the event starts
-    qint64 secondsToEvent = currentDateTime.secsTo(scheduledDateTime);
+    const qint64 secondsToEvent = currentDateTime.secsTo(scheduledDateTime);
     
     // If the event has already passed or less than 1 hour (3600 seconds) remains, it can start
     return secondsToEvent <= 3600;
@@ -1085,22 +1067,51 @@ bool CronometerWindow::canStartEvent(const QDateTime& scheduledDateTime) const {
 
 void CronometerWindow::updateStartButtonState() {
     // Only update if not running and a trial is selected
-    if (started || currentTrialId <= 0) {
+    if (m_started || m_currentTrialId <= 0) {
         return;
     }
     
     // Find the current trial in the loaded events
-    auto it = std::find_if(loadedEvents.begin(), loadedEvents.end(),
-                          [this](const Trials::TrialInfo& trial) {
-                              return trial.id == currentTrialId;
-                          });
+    auto it = std::ranges::find_if(m_loadedEvents,
+                                   [this](const Trials::TrialInfo& trial) {
+                                       return trial.id == m_currentTrialId;
+                                   });
     
-    if (it != loadedEvents.end()) {
+    if (it != m_loadedEvents.end()) {
         ui->btnStart->setEnabled(canStartEvent(it->scheduledDateTime));
     }
 }
 
 bool CronometerWindow::canGenerateReport() const {
-    // Allow report generation for any selected event
-    return currentTrialId > 0;
+    // Allow generating report only for events of the day or past that are finished
+    if (m_currentTrialId <= 0)
+        return false;
+
+    // Search for the selected event
+    auto it = std::ranges::find_if(m_loadedEvents,
+                                   [this](const Trials::TrialInfo& trial) {
+                                       return trial.id == m_currentTrialId;
+                                   });
+    if (it == m_loadedEvents.end())
+        return false;
+
+    const auto& trial = *it;
+    const auto epochZero = Utils::DateTimeUtils::epochZero();
+
+    // Only allow if:
+    // - Event is in the past or today AND is finished
+    // - OR is currently being timed (started == true for the selected event)
+    // - Future events never enable
+    if (const QDate today = QDate::currentDate(); trial.scheduledDateTime.date() > today)
+        return false;
+
+    // Allow if currently being timed
+    if (m_started && trial.id == m_currentTrialId)
+        return true;
+
+    // Allow if finished
+    if (trial.endDateTime != epochZero)
+        return true;
+
+    return false;
 }

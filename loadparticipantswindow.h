@@ -33,8 +33,8 @@ struct ParticipantData {
     QString plateCode;
     QString category;
     QString modality;
-    bool valid = false;
     QString errorMessage = "";
+    bool isValid() const { return errorMessage.isEmpty(); }
 };
 
 struct ConflictData {
@@ -58,7 +58,7 @@ class LoadParticipantsWindow : public QDialog
 
 public:
     LoadParticipantsWindow(DBManager& dbManager, QWidget *parent = nullptr);
-    ~LoadParticipantsWindow();
+    ~LoadParticipantsWindow() override;
 
     void setAvailableTrials(const QVector<Trials::TrialInfo>& trials);
     void setActiveTrialId(int activeTrialId);
@@ -74,31 +74,31 @@ private:
     DBManager& m_dbManager;
     
     // UI Components
-    QVBoxLayout* mainLayout;
-    QFormLayout* formLayout;
-    QHBoxLayout* fileLayout;
-    QHBoxLayout* buttonLayout;
+    QVBoxLayout* m_mainLayout;
+    QFormLayout* m_formLayout;
+    QHBoxLayout* m_fileLayout;
+    QHBoxLayout* m_buttonLayout;
     
-    QComboBox* trialCombo;
-    QLineEdit* filePathEdit;
-    QPushButton* selectFileButton;
-    QPushButton* previewButton;
-    QPushButton* importButton;
-    QPushButton* cancelButton;
-    QTableWidget* previewTable;
-    QProgressBar* progressBar;
-    QLabel* statusLabel;
+    QComboBox* m_trialCombo;
+    QLineEdit* m_filePathEdit;
+    QPushButton* m_selectFileButton;
+    QPushButton* m_previewButton;
+    QPushButton* m_importButton;
+    QPushButton* m_cancelButton;
+    QTableWidget* m_previewTable;
+    QProgressBar* m_progressBar;
+    QLabel* m_statusLabel;
     
     // Data
-    QVector<Trials::TrialInfo> availableTrials;
-    QVector<ParticipantData> participantsData;
-    QVector<ConflictData> conflictsData;
-    QVector<Athletes::Athlete> athletes;
-    QVector<Categories::Category> categories;
-    QVector<Modalities::Modality> modalities;
-    QString selectedFilePath;
-    int selectedTrialId;
-    int activeTrialId;
+    QVector<Trials::TrialInfo> m_availableTrials;
+    QVector<ParticipantData> m_participantsData;
+    QVector<ConflictData> m_conflictsData;
+    QVector<Athletes::Athlete> m_athletes;
+    QVector<Categories::Category> m_categories;
+    QVector<Modalities::Modality> m_modalities;
+    QString m_selectedFilePath;
+    int m_selectedTrialId;
+    int m_activeTrialId;
     
     // Methods
     void setupUI();

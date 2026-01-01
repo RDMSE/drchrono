@@ -17,18 +17,18 @@ class NewEventWindow : public QDialog
 
 public:
     explicit NewEventWindow(QWidget *parent = nullptr);
-    ~NewEventWindow();
+    ~NewEventWindow() override;
     
     // Métodos para capturar os dados de entrada
-    QString getEventName() const;
-    QDateTime getEventStartTime() const;
+    [[nodiscard]] QString getEventName() const;
+    [[nodiscard]] QDateTime getEventStartTime() const;
     
     // Métodos para definir valores (útil para edição)
-    void setEventName(const QString &name);
-    void setEventStartTime(const QDateTime &dateTime);
+    void setEventName(const QString &name) const;
+    void setEventStartTime(const QDateTime &dateTime) const;
     
     // Método para definir lista de eventos existentes (autocomplete)
-    void setExistingEventNames(const QStringList &eventNames);
+    void setExistingEventNames(const QStringList &eventNames) const;
 
 private slots:
     void onAccepted();

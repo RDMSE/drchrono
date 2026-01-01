@@ -9,7 +9,7 @@ class Report
 public:
     Report() = delete;
 
-    static bool exportExcel(int trialId, const QString& outputFileName, QSqlDatabase db);
+    static bool exportExcel(int trialId, const QString &outputFileName, const QSqlDatabase &db);
 };
 
 #endif // REPORT_H

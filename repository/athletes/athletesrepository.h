@@ -12,19 +12,19 @@ namespace Athletes {
 class Repository
 {
 public:
-    explicit Repository(QSqlDatabase db);
+    explicit Repository(const QSqlDatabase& db);
 
-    tl::expected<Athletes::Athlete, QString> createAthlete(const QString& name);
-    tl::expected<Athletes::Athlete, QString> getAthleteById(const int id);
-    tl::expected<Athletes::Athlete, QString> getAthleteByName(const QString& name);
-    tl::expected<QVector<Athletes::Athlete>, QString> getAllAthletes();
-    tl::expected<Athletes::Athlete, QString> updateAthleteById(int id, const Athletes::Athlete& athlete);
-    tl::expected<int, QString> deleteAthleteById(const int id);
-    tl::expected<int, QString> deleteAthleteByName(const QString& name);
+    [[nodiscard]] tl::expected<Athlete, QString> createAthlete(const QString& name) const;
+    [[nodiscard]] tl::expected<Athlete, QString> getAthleteById(int id) const;
+    [[nodiscard]] tl::expected<Athlete, QString> getAthleteByName(const QString& name) const;
+    [[nodiscard]] tl::expected<QVector<Athlete>, QString> getAllAthletes() const;
+    [[nodiscard]] tl::expected<Athlete, QString> updateAthleteById(int id, const Athlete& athlete) const;
+    [[nodiscard]] tl::expected<int, QString> deleteAthleteById(int id) const;
+    [[nodiscard]] tl::expected<int, QString> deleteAthleteByName(const QString& name) const;
 
 private:
     QSqlDatabase m_db;
-    tl::expected<void, QString> createAthletesTable();
+    [[nodiscard]] tl::expected<void, QString> createAthletesTable() const;
 };
 
 };

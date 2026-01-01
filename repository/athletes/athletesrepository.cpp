@@ -2,14 +2,13 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
-Athletes::Repository::Repository(QSqlDatabase db) : m_db(db) {
-    auto value = createAthletesTable();
-    if (!value) {
+Athletes::Repository::Repository(const QSqlDatabase& db) : m_db(db) {
+    if (auto value = createAthletesTable(); !value) {
         qFatal("Athletes table creation failed: %s", value.error().toLocal8Bit().constData());
     }
 }
 
-tl::expected<void, QString> Athletes::Repository::createAthletesTable() {
+tl::expected<void, QString> Athletes::Repository::createAthletesTable() const {
     QSqlQuery query(m_db);
 
     const QString sql = R"(
@@ -26,7 +25,7 @@ tl::expected<void, QString> Athletes::Repository::createAthletesTable() {
     return {};
 }
 
-tl::expected<Athletes::Athlete, QString> Athletes::Repository::createAthlete(const QString& name) {
+tl::expected<Athletes::Athlete, QString> Athletes::Repository::createAthlete(const QString& name) const {
     if (name.isEmpty()) {
         return tl::unexpected("[AR]: invalid name");
     }
@@ -65,7 +64,7 @@ tl::expected<Athletes::Athlete, QString> Athletes::Repository::createAthlete(con
     };
 }
 
-tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteById(const int id) {
+tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteById(const int id) const {
 
     const QString sql = R"(
         SELECT
@@ -88,7 +87,7 @@ tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteById(co
     };
 }
 
-tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteByName(const QString& name) {
+tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteByName(const QString& name) const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -114,7 +113,7 @@ tl::expected<Athletes::Athlete, QString> Athletes::Repository::getAthleteByName(
     return {};
 }
 
-tl::expected<QVector<Athletes::Athlete>, QString> Athletes::Repository::getAllAthletes() {
+tl::expected<QVector<Athletes::Athlete>, QString> Athletes::Repository::getAllAthletes() const {
     QSqlQuery querySelect(m_db);
     const QString sql = R"(
         SELECT
@@ -139,7 +138,7 @@ tl::expected<QVector<Athletes::Athlete>, QString> Athletes::Repository::getAllAt
     return results;
 }
 
-tl::expected<Athletes::Athlete, QString> Athletes::Repository::updateAthleteById(int id, const Athletes::Athlete& athlete) {
+tl::expected<Athletes::Athlete, QString> Athletes::Repository::updateAthleteById(const int id, const Athletes::Athlete& athlete) const {
 
     if (athlete.name.isEmpty()) {
         return tl::unexpected("[AR]: invalid name");
@@ -163,7 +162,7 @@ tl::expected<Athletes::Athlete, QString> Athletes::Repository::updateAthleteById
     return athlete;
 }
 
-tl::expected<int, QString> Athletes::Repository::deleteAthleteById(const int id) {
+tl::expected<int, QString> Athletes::Repository::deleteAthleteById(const int id) const {
     QSqlQuery queryUpdate(m_db);
     const QString sql = R"(
         DELETE FROM athletes
@@ -181,7 +180,7 @@ tl::expected<int, QString> Athletes::Repository::deleteAthleteById(const int id)
 }
 
 
-tl::expected<int, QString> Athletes::Repository::deleteAthleteByName(const QString& name) {
+tl::expected<int, QString> Athletes::Repository::deleteAthleteByName(const QString& name) const {
 
     auto athlete = getAthleteByName(name);
     if (!athlete.has_value())

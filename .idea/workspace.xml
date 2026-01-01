@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="BackendCodeEditorMiscSettings">
+    <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/LiveTemplatesHousekeeping/HotspotSessionHintIsShown/@EntryValue" value="true" type="bool" />
+    <option name="/Default/RiderDebugger/RiderRestoreDecompile/RestoreDecompileSetting/@EntryValue" value="false" type="bool" />
+  </component>
+  <component name="CMakePresetLoader">{
+  &quot;useNewFormat&quot;: true
+}</component>
+  <component name="CMakeProjectFlavorService">
+    <option name="flavorId" value="CMakePlainProjectFlavor" />
+  </component>
+  <component name="CMakeReloadState">
+    <option name="reloaded" value="true" />
+  </component>
+  <component name="CMakeRunConfigurationManager">
+    <generated>
+      <config projectName="crono" targetName="QXlsx" />
+      <config projectName="crono" targetName="crono" />
+    </generated>
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="4ad5eb45-3625-4216-92d7-fc5ee5a4af88" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.qtcreator/crono.pro.user" beforeDir="false" afterPath="$PROJECT_DIR$/.qtcreator/crono.pro.user" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aggregates/eventaggregate.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/aggregates/eventaggregate.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aggregates/eventaggregate.h" beforeDir="false" afterPath="$PROJECT_DIR$/aggregates/eventaggregate.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aggregates/trialaggregate.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/aggregates/trialaggregate.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aggregates/trialaggregate.h" beforeDir="false" afterPath="$PROJECT_DIR$/aggregates/trialaggregate.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cronometerwindow.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/cronometerwindow.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cronometerwindow.h" beforeDir="false" afterPath="$PROJECT_DIR$/cronometerwindow.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbmanager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/dbmanager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbmanager.h" beforeDir="false" afterPath="$PROJECT_DIR$/dbmanager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/loadparticipantswindow.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/loadparticipantswindow.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/loadparticipantswindow.h" beforeDir="false" afterPath="$PROJECT_DIR$/loadparticipantswindow.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/neweventwindow.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/neweventwindow.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/neweventwindow.h" beforeDir="false" afterPath="$PROJECT_DIR$/neweventwindow.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/participantswindow.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/participantswindow.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/participantswindow.h" beforeDir="false" afterPath="$PROJECT_DIR$/participantswindow.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/report.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/report.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/report.h" beforeDir="false" afterPath="$PROJECT_DIR$/report.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/athletes/athletesrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/athletes/athletesrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/athletes/athletesrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/athletes/athletesrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/categories/categoriesrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/categories/categoriesrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/categories/categoriesrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/categories/categoriesrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/modalities/modalitiesrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/modalities/modalitiesrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/modalities/modalitiesrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/modalities/modalitiesrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/registrations/registrationsrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/registrations/registrationsrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/registrations/registrationsrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/registrations/registrationsrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/results/resultsrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/results/resultsrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/results/resultsrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/results/resultsrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/trials/trialsrepository.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/repository/trials/trialsrepository.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/trials/trialsrepository.h" beforeDir="false" afterPath="$PROJECT_DIR$/repository/trials/trialsrepository.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/excelutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/excelutils.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/excelutils.h" beforeDir="false" afterPath="$PROJECT_DIR$/utils/excelutils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/timeutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/timeutils.cpp" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="M7ZxVVzo" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="37CE69zF97jSHchUfGerMwj2WzZ" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.RadMigrateCodeStyle&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.west.config.association.type.startup.service&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/DRMNT-8&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/rdias/sources/lab/drchrono&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;CMakeSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="CMake Application.crono">
+    <configuration name="QXlsx" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="crono" TARGET_NAME="QXlsx" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="crono" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="crono" TARGET_NAME="crono" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="crono" RUN_TARGET_NAME="crono">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="CMake Application.QXlsx" />
+      <item itemvalue="CMake Application.crono" />
+    </list>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="4ad5eb45-3625-4216-92d7-fc5ee5a4af88" name="Changes" comment="" />
+      <created>1766398476871</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1766398476871</updated>
+      <workItem from="1766398479986" duration="83000" />
+      <workItem from="1766398566353" duration="125000" />
+      <workItem from="1766411942173" duration="290000" />
+      <workItem from="1766412237166" duration="196000" />
+      <workItem from="1766412453930" duration="271000" />
+      <workItem from="1766412827387" duration="241000" />
+      <workItem from="1766413075147" duration="141000" />
+      <workItem from="1766413255133" duration="5000" />
+      <workItem from="1766413398400" duration="35000" />
+      <workItem from="1766413474091" duration="452000" />
+      <workItem from="1766413940817" duration="1175000" />
+      <workItem from="1766415138590" duration="4887000" />
+      <workItem from="1766420039516" duration="2000" />
+      <workItem from="1766478795798" duration="4062000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VCPKGProject">
+    <isAutomaticCheckingOnLaunch value="false" />
+    <isAutomaticFoundErrors value="true" />
+    <isAutomaticReloadCMake value="true" />
+  </component>
+</project>

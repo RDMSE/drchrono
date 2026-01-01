@@ -30,13 +30,13 @@ class ParticipantsWindow : public QDialog
 
 public:
     ParticipantsWindow(DBManager& dbManager, QWidget *parent = nullptr);
-    ~ParticipantsWindow();
+    ~ParticipantsWindow() override;
 
     void setCurrentTrial(const Trials::TrialInfo& trial);
 
 private slots:
     void loadParticipants();
-    void onCategoryTabChanged(int index);
+    static void onCategoryTabChanged(int index);
 
 private:
     Ui::ParticipantsWindow *ui;
@@ -56,8 +56,8 @@ private:
         "Nome do Atleta"
     };
 
-    int getHeaderIndex(const QString& headerName) const {
-        return headers.indexOf(headerName);
+    [[nodiscard]] int getHeaderIndex(const QString& headerName) const {
+        return static_cast<int>(headers.indexOf(headerName));
     }
     
     // UI Components

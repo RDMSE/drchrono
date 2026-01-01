@@ -1,9 +1,8 @@
 #include "dbmanager.h"
-#include <QDebug>
 #include <QSqlError>
 #include <QSqlQuery>
 
-DBManager::DBManager(const QString path) {
+DBManager::DBManager(const QString& path) {
     if (path.trimmed().isEmpty())
         return;
 
@@ -32,7 +31,7 @@ DBManager::~DBManager() {
     }
 }
 
-void DBManager::init() {
+void DBManager::init() const {
     if(!isOpen()) {
         qFatal("[DB] Not possible to init the database");
         return;

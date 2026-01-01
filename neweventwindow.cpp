@@ -41,11 +41,11 @@ QDateTime NewEventWindow::getEventStartTime() const {
     return ui->timeEventStart->dateTime();
 }
 
-void NewEventWindow::setEventName(const QString &name) {
+void NewEventWindow::setEventName(const QString &name) const {
     ui->edtEventName->setText(name);
 }
 
-void NewEventWindow::setEventStartTime(const QDateTime &dateTime) {
+void NewEventWindow::setEventStartTime(const QDateTime &dateTime) const {
     ui->timeEventStart->setDateTime(dateTime);
 }
 
@@ -64,8 +64,6 @@ void NewEventWindow::onAccepted() {
         reject();
         return;
     }
-
-    
     accept();
 }
 
@@ -74,10 +72,9 @@ void NewEventWindow::onRejected() {
 }
 
 // Método para definir lista de eventos existentes (autocomplete)
-void NewEventWindow::setExistingEventNames(const QStringList &eventNames)
-{
+void NewEventWindow::setExistingEventNames(const QStringList &eventNames) const {
     if (completer) {
-        QStringListModel *model = new QStringListModel(eventNames, completer);
+        auto *model = new QStringListModel(eventNames, completer);
         completer->setModel(model);
     }
 }

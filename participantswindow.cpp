@@ -18,8 +18,7 @@ ParticipantsWindow::ParticipantsWindow(DBManager& dbManager, QWidget *parent)
 }
 
 ParticipantsWindow::~ParticipantsWindow()
-{
-}
+= default;
 
 void ParticipantsWindow::setupUI()
 {
@@ -49,9 +48,8 @@ void ParticipantsWindow::loadBasicData()
 {
     try {
         // Load categories
-        Categories::Repository categoriesRepo(m_dbManager.database());
-        auto categoriesResult = categoriesRepo.getAllCategories();
-        if (categoriesResult.has_value()) {
+        Categories::Repository categoriesRepo(DBManager::database());
+        if (auto categoriesResult = categoriesRepo.getAllCategories(); categoriesResult.has_value()) {
             categories = categoriesResult.value();
             qDebug() << "[ParticipantsWindow] Loaded" << categories.size() << "categories";
         } else {
@@ -59,9 +57,8 @@ void ParticipantsWindow::loadBasicData()
         }
         
         // Load modalities
-        Modalities::Repository modalitiesRepo(m_dbManager.database());
-        auto modalitiesResult = modalitiesRepo.getAllModalities();
-        if (modalitiesResult.has_value()) {
+        Modalities::Repository modalitiesRepo(DBManager::database());
+        if (auto modalitiesResult = modalitiesRepo.getAllModalities(); modalitiesResult.has_value()) {
             modalities = modalitiesResult.value();
             qDebug() << "[ParticipantsWindow] Loaded" << modalities.size() << "modalities";
         } else {
@@ -69,9 +66,8 @@ void ParticipantsWindow::loadBasicData()
         }
         
         // Load athletes
-        Athletes::Repository athletesRepo(m_dbManager.database());
-        auto athletesResult = athletesRepo.getAllAthletes();
-        if (athletesResult.has_value()) {
+        Athletes::Repository athletesRepo(DBManager::database());
+        if (auto athletesResult = athletesRepo.getAllAthletes(); athletesResult.has_value()) {
             athletes = athletesResult.value();
             qDebug() << "[ParticipantsWindow] Loaded" << athletes.size() << "athletes";
         } else {
@@ -89,8 +85,7 @@ void ParticipantsWindow::setCurrentTrial(const Trials::TrialInfo& trial)
     currentTrial = trial;
     qDebug() << "[ParticipantsWindow] Setting current trial:" << trial.name << "ID:" << trial.id;
     eventLabel->setText(QString("Evento: %1 - %2")
-                       .arg(trial.name)
-                       .arg(trial.scheduledDateTime.toString("dd/MM/yyyy hh:mm")));
+                       .arg(trial.name, trial.scheduledDateTime.toString("dd/MM/yyyy hh:mm")));
     loadParticipants();
 }
 
@@ -102,16 +97,15 @@ void ParticipantsWindow::loadParticipants()
     }
     
     try {
-        Registrations::Repository registrationsRepo(m_dbManager.database());
-        auto registrationsResult = registrationsRepo.getRegistrationsByTrial(currentTrial.id);
-        
-        if (registrationsResult.has_value()) {
+        const Registrations::Repository registrationsRepo(DBManager::database());
+
+        if (auto registrationsResult = registrationsRepo.getRegistrationsByTrial(currentTrial.id); registrationsResult.has_value()) {
             registrations = registrationsResult.value();
             qDebug() << QString("Loaded %1 registrations for trial %2").arg(registrations.size()).arg(currentTrial.id);
             createCategoryTabs();
         } else {
             qDebug() << "Error loading registrations:" << registrationsResult.error();
-            QMessageBox::warning(this, "Erro", "Erro ao carregar registrações: " + registrationsResult.error());
+            QMessageBox::warning(this, "Error", "Error loading registrations: " + registrationsResult.error());
         }
         
     } catch (const std::exception& e) {
@@ -128,7 +122,7 @@ void ParticipantsWindow::createCategoryTabs()
     
     if (categories.isEmpty()) {
         qDebug() << "[ParticipantsWindow] No categories found, showing 'no data' tab";
-        QLabel* noDataLabel = new QLabel("No categories found");
+        auto* noDataLabel = new QLabel("No categories found");
         noDataLabel->setAlignment(Qt::AlignCenter);
         tabWidget->addTab(noDataLabel, "No data");
         return;
@@ -151,9 +145,9 @@ void ParticipantsWindow::createCategoryTabs()
             qDebug() << QString("[ParticipantsWindow] Creating tab for category: '%1': %2 registrations")
                        .arg(category.name, QString::number(categoryRegistrations.size()));
             
-            QTableWidget* table = new QTableWidget();
+            auto* table = new QTableWidget();
             // QStringList headers = {"Modalidade", "Código da Placa", "Nome do Atleta"};
-            table->setColumnCount(headers.size());
+            table->setColumnCount(static_cast<int>(headers.size()));
             table->setHorizontalHeaderLabels(headers);
             
             // Configure table
@@ -178,7 +172,7 @@ void ParticipantsWindow::createCategoryTabs()
     qDebug() << "[ParticipantsWindow] Created" << tabsCreated << "tabs with data";
     if (tabWidget->count() == 0) {
         qDebug() << "[ParticipantsWindow] No tabs with data, showing 'no participants' message";
-        QLabel* noDataLabel = new QLabel("Nenhum participante registrado neste evento");
+        auto* noDataLabel = new QLabel("No participants registered on this event");
         noDataLabel->setAlignment(Qt::AlignCenter);
         noDataLabel->setStyleSheet("color: #666; font-size: 14px;");
         tabWidget->addTab(noDataLabel, "Sem dados");
@@ -188,7 +182,7 @@ void ParticipantsWindow::createCategoryTabs()
 void ParticipantsWindow::populateTable(QTableWidget* table, const QVector<Registrations::Registration>& categoryRegistrations)
 {
     qDebug() << "[ParticipantsWindow] Populating table with" << categoryRegistrations.size() << "registrations";
-    table->setRowCount(categoryRegistrations.size());
+    table->setRowCount(static_cast<int>(categoryRegistrations.size()));
     
     for (int row = 0; row < categoryRegistrations.size(); ++row) {
         const auto& registration = categoryRegistrations[row];
@@ -231,20 +225,19 @@ QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCateg
     }
     
     // Order by modality and then by plate number
-    std::sort(result.begin(), result.end(), [this](const Registrations::Registration& a, const Registrations::Registration& b) {
+    std::ranges::sort(result, [this](const Registrations::Registration& a, const Registrations::Registration& b) {
         // First by modality
-        QString modalityA = getModalityName(a.modalityId);
-        QString modalityB = getModalityName(b.modalityId);
-        
-        if (modalityA != modalityB) {
+        const QString modalityA = getModalityName(a.modalityId);
+
+        if (const QString modalityB = getModalityName(b.modalityId); modalityA != modalityB) {
             return modalityA < modalityB;
         }
         
         // If modality is the same, order by plate number
         // Convert plate to number if possible, otherwise order alphabetically
         bool okA, okB;
-        int plateNumA = a.plateCode.toInt(&okA);
-        int plateNumB = b.plateCode.toInt(&okB);
+        const int plateNumA = a.plateCode.toInt(&okA);
+        const int plateNumB = b.plateCode.toInt(&okB);
         
         if (okA && okB) {
             return plateNumA < plateNumB;
@@ -258,7 +251,7 @@ QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCateg
     return result;
 }
 
-QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCategoryAndModality(int categoryId, int modalityId)
+QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCategoryAndModality(const int categoryId, const int modalityId)
 {
     QVector<Registrations::Registration> result;
     
@@ -269,11 +262,11 @@ QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCateg
     }
     
     // Order by plate number
-    std::sort(result.begin(), result.end(), [](const Registrations::Registration& a, const Registrations::Registration& b) {
+    std::ranges::sort(result, [](const Registrations::Registration& a, const Registrations::Registration& b) {
         // Convert plate to number if possible, otherwise order alphabetically
         bool okA, okB;
-        int plateNumA = a.plateCode.toInt(&okA);
-        int plateNumB = b.plateCode.toInt(&okB);
+        const int plateNumA = a.plateCode.toInt(&okA);
+        const int plateNumB = b.plateCode.toInt(&okB);
         
         if (okA && okB) {
             return plateNumA < plateNumB;
@@ -290,7 +283,7 @@ QVector<Registrations::Registration> ParticipantsWindow::getRegistrationsByCateg
 void ParticipantsWindow::populateCombinationTable(QTableWidget* table, const QVector<Registrations::Registration>& combinationRegistrations)
 {
     qDebug() << "[ParticipantsWindow] Populating combination table with" << combinationRegistrations.size() << "registrations";
-    table->setRowCount(combinationRegistrations.size());
+    table->setRowCount(static_cast<int>(combinationRegistrations.size()));
     
     for (int row = 0; row < combinationRegistrations.size(); ++row) {
         const auto& registration = combinationRegistrations[row];
@@ -318,9 +311,9 @@ void ParticipantsWindow::populateCombinationTable(QTableWidget* table, const QVe
 
 QString ParticipantsWindow::getAthleteName(int athleteId)
 {
-    for (const auto& athlete : athletes) {
-        if (athlete.id == athleteId) {
-            return athlete.name;
+    for (const auto&[id, name] : athletes) {
+        if (id == athleteId) {
+            return name;
         }
     }
     return QString("ID: %1").arg(athleteId);
@@ -328,9 +321,9 @@ QString ParticipantsWindow::getAthleteName(int athleteId)
 
 QString ParticipantsWindow::getModalityName(int modalityId)
 {
-    for (const auto& modality : modalities) {
-        if (modality.id == modalityId) {
-            return modality.name;
+    for (const auto&[id, name] : modalities) {
+        if (id == modalityId) {
+            return name;
         }
     }
     return QString("ID: %1").arg(modalityId);
@@ -338,15 +331,15 @@ QString ParticipantsWindow::getModalityName(int modalityId)
 
 QString ParticipantsWindow::getCategoryName(int categoryId)
 {
-    for (const auto& category : categories) {
-        if (category.id == categoryId) {
-            return category.name;
+    for (const auto&[id, name] : categories) {
+        if (id == categoryId) {
+            return name;
         }
     }
     return QString("ID: %1").arg(categoryId);
 }
 
-void ParticipantsWindow::onCategoryTabChanged(int index)
+void ParticipantsWindow::onCategoryTabChanged(const int index)
 {
     // Handle tab change if needed
     Q_UNUSED(index);

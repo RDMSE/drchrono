@@ -1,39 +1,35 @@
-#ifndef REGISTRATIONSREPOSITORY_H
-#define REGISTRATIONSREPOSITORY_H
+#pragma once
 
 #include "registration.h"
 #include <QSqlDatabase>
 #include <QString>
 #include <tl/expected.hpp>
-#include <QVector>
 
 namespace Registrations {
 
 class Repository
 {
 public:
-    explicit Repository(QSqlDatabase db);
+    explicit Repository(const QSqlDatabase& db);
 
-    tl::expected<Registrations::Registration, QString> createRegistration(
+    [[nodiscard]] tl::expected<Registration, QString> createRegistration(
         int trialId, 
         int athleteId, 
         const QString& plateCode, 
         int modalityId, 
         int categoryId
-    );
-    tl::expected<Registrations::Registration, QString> getRegistrationById(const int id);
-    tl::expected<Registrations::Registration, QString> getRegistrationByPlateCode(int trialId, const QString& plateCode);
-    tl::expected<QVector<Registrations::Registration>, QString> getRegistrationsByTrial(int trialId);
-    tl::expected<QVector<Registrations::Registration>, QString> getAllRegistrations();
-    tl::expected<Registrations::Registration, QString> updateRegistrationById(const int id, const Registrations::Registration& registration);
-    tl::expected<int, QString> deleteRegistrationById(const int id);
-    tl::expected<int, QString> deleteRegistrationsByTrial(const int trialId);
+    ) const;
+    [[nodiscard]] tl::expected<Registration, QString> getRegistrationById(int id) const;
+    [[nodiscard]] tl::expected<Registration, QString> getRegistrationByPlateCode(int trialId, const QString& plateCode) const;
+    [[nodiscard]] tl::expected<QVector<Registration>, QString> getRegistrationsByTrial(int trialId) const;
+    [[nodiscard]] tl::expected<QVector<Registration>, QString> getAllRegistrations() const;
+    [[nodiscard]] tl::expected<Registration, QString> updateRegistrationById(int id, const Registration& registration) const;
+    [[nodiscard]] tl::expected<int, QString> deleteRegistrationById(int id) const;
+    [[nodiscard]] tl::expected<int, QString> deleteRegistrationsByTrial(int trialId) const;
 
 private:
     QSqlDatabase m_db;
-    tl::expected<void, QString> createRegistrationsTable();
+    [[nodiscard]] tl::expected<void, QString> createRegistrationsTable() const;
 };
 
 };
-
-#endif // REGISTRATIONSREPOSITORY_H

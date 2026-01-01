@@ -7,9 +7,9 @@
 #include <algorithm>
 #include "utils/timeutils.h"
 
-bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabase db) {
+bool Report::exportExcel(const int trialId, const QString& outputFileName, const QSqlDatabase& db) {
 
-    const QString timeFormat = "hh:MM:ss";
+    //const QString timeFormat = "hh:MM:ss";
 
     QXlsx::Document xlsx;
 
@@ -99,7 +99,7 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
         evQuery.bindValue(":modalityName", modalityName);
 
         if (!evQuery.exec()) {
-            qWarning() << "Erro getting events:" << evQuery.lastError().text();
+            qWarning() << "Error getting events:" << evQuery.lastError().text();
             continue;
         }
 
@@ -119,7 +119,7 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
             };
 
             for (int i = 0; i < values.length(); i++) {
-                QString text = values[i];
+                const QString& text = values[i];
                 xlsx.write(row, i+1, text, fmt);
                 colWidth[i] = std::max(colWidth[i], static_cast<int>(text.length()));
             }
@@ -128,7 +128,7 @@ bool Report::exportExcel(int trialId, const QString& outputFileName, QSqlDatabas
         }
 
         for (int i = 0; i < colWidth.size(); i++){
-            int w = colWidth[i] * 1.2;
+            const int w = static_cast<int>(colWidth[i] * 1.2);
             xlsx.setColumnWidth(i + 1, w);
         }
     }

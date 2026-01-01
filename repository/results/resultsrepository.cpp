@@ -2,14 +2,13 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
-Results::Repository::Repository(QSqlDatabase db) : m_db(db) {
-    auto value = createResultsTable();
-    if (!value) {
+Results::Repository::Repository(const QSqlDatabase& db) : m_db(db) {
+    if (auto value = createResultsTable(); !value) {
         qFatal("Results table creation failed: %s", value.error().toLocal8Bit().constData());
     }
 }
 
-tl::expected<void, QString> Results::Repository::createResultsTable() {
+tl::expected<void, QString> Results::Repository::createResultsTable() const {
     QSqlQuery query(m_db);
 
     QString sql = R"(
@@ -43,18 +42,18 @@ tl::expected<void, QString> Results::Repository::createResultsTable() {
 }
 
 tl::expected<Results::Result, QString> Results::Repository::createResult(
-    int registrationId, 
+    const int registrationId,
     const QDateTime& startTime, 
-    const QDateTime& endTime, 
-    int durationMs, 
-    const QString& notes) {
+    const QDateTime& endTime,
+    const int durationMs,
+    const QString& notes) const {
 
     if (!startTime.isValid()) {
         return tl::unexpected("[ResR] Invalid start time");
     }
 
     QSqlQuery queryInsert(m_db);
-    QString sql = R"(
+    const QString sql = R"(
         INSERT INTO results(registrationId, startTime, endTime, durationMs, notes) 
         VALUES(:registrationId, :startTime, :endTime, :durationMs, :notes)
     )";
@@ -70,9 +69,9 @@ tl::expected<Results::Result, QString> Results::Repository::createResult(
         return tl::unexpected("[ResR] Error inserting result: " + queryInsert.lastError().text());
     }
 
-    int newId = queryInsert.lastInsertId().toInt();
+    const int newId = queryInsert.lastInsertId().toInt();
     
-    return (Results::Result) {
+    return (Result) {
         .id = newId,
         .registrationId = registrationId,
         .startTime = startTime,
@@ -82,7 +81,7 @@ tl::expected<Results::Result, QString> Results::Repository::createResult(
     };
 }
 
-tl::expected<Results::Result, QString> Results::Repository::getResultById(const int id) {
+tl::expected<Results::Result, QString> Results::Repository::getResultById(const int id) const {
     const QString sql = R"(
         SELECT registrationId, startTime, endTime, durationMs, notes
         FROM results
@@ -97,7 +96,7 @@ tl::expected<Results::Result, QString> Results::Repository::getResultById(const 
         return tl::unexpected("[ResR] Error fetching result with id " + QString::number(id) + ": " + querySelect.lastError().text());
     }
 
-    return (Results::Result) {
+    return (Result) {
         .id = id,
         .registrationId = querySelect.value(0).toInt(),
         .startTime = QDateTime::fromString(querySelect.value(1).toString(), Qt::ISODate),
@@ -107,7 +106,7 @@ tl::expected<Results::Result, QString> Results::Repository::getResultById(const 
     };
 }
 
-tl::expected<Results::Result, QString> Results::Repository::getResultByRegistration(int registrationId) {
+tl::expected<Results::Result, QString> Results::Repository::getResultByRegistration(const int registrationId) const {
     const QString sql = R"(
         SELECT id, startTime, endTime, durationMs, notes
         FROM results
@@ -122,7 +121,7 @@ tl::expected<Results::Result, QString> Results::Repository::getResultByRegistrat
         return tl::unexpected("[ResR] Error fetching result for registration " + QString::number(registrationId) + ": " + querySelect.lastError().text());
     }
 
-    return (Results::Result) {
+    return (Result) {
         .id = querySelect.value(0).toInt(),
         .registrationId = registrationId,
         .startTime = QDateTime::fromString(querySelect.value(1).toString(), Qt::ISODate),
@@ -132,7 +131,7 @@ tl::expected<Results::Result, QString> Results::Repository::getResultByRegistrat
     };
 }
 
-tl::expected<QVector<Results::Result>, QString> Results::Repository::getResultsByTrial(int trialId) {
+tl::expected<QVector<Results::Result>, QString> Results::Repository::getResultsByTrial(int trialId) const {
     const QString sql = R"(
         SELECT r.id, r.registrationId, r.startTime, r.endTime, r.durationMs, r.notes
         FROM results r
@@ -149,7 +148,7 @@ tl::expected<QVector<Results::Result>, QString> Results::Repository::getResultsB
         return tl::unexpected("[ResR] Error fetching results for trial " + QString::number(trialId) + ": " + querySelect.lastError().text());
     }
 
-    QVector<Results::Result> results;
+    QVector<Result> results;
     while (querySelect.next()) {
         results.push_back({
             .id = querySelect.value(0).toInt(),
@@ -164,7 +163,7 @@ tl::expected<QVector<Results::Result>, QString> Results::Repository::getResultsB
     return results;
 }
 
-tl::expected<QVector<Results::Result>, QString> Results::Repository::getAllResults() {
+tl::expected<QVector<Results::Result>, QString> Results::Repository::getAllResults() const {
     const QString sql = R"(
         SELECT id, registrationId, startTime, endTime, durationMs, notes
         FROM results
@@ -178,7 +177,7 @@ tl::expected<QVector<Results::Result>, QString> Results::Repository::getAllResul
         return tl::unexpected("[ResR] Error fetching all results: " + querySelect.lastError().text());
     }
 
-    QVector<Results::Result> results;
+    QVector<Result> results;
     while (querySelect.next()) {
         results.push_back({
             .id = querySelect.value(0).toInt(),
@@ -193,7 +192,7 @@ tl::expected<QVector<Results::Result>, QString> Results::Repository::getAllResul
     return results;
 }
 
-tl::expected<Results::Result, QString> Results::Repository::updateResultById(const int id, const Results::Result& result) {
+tl::expected<Results::Result, QString> Results::Repository::updateResultById(const int id, const Result& result) const {
     if (!result.startTime.isValid()) {
         return tl::unexpected("[ResR] Invalid start time");
     }
@@ -221,7 +220,7 @@ tl::expected<Results::Result, QString> Results::Repository::updateResultById(con
     return result;
 }
 
-tl::expected<int, QString> Results::Repository::deleteResultById(const int id) {
+tl::expected<int, QString> Results::Repository::deleteResultById(const int id) const {
     QSqlQuery queryDelete(m_db);
     const QString sql = R"(
         DELETE FROM results
@@ -238,7 +237,7 @@ tl::expected<int, QString> Results::Repository::deleteResultById(const int id) {
     return id;
 }
 
-tl::expected<int, QString> Results::Repository::deleteResultsByRegistration(const int registrationId) {
+tl::expected<int, QString> Results::Repository::deleteResultsByRegistration(const int registrationId) const {
     QSqlQuery queryDelete(m_db);
     const QString sql = R"(
         DELETE FROM results

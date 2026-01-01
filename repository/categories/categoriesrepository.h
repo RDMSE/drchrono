@@ -5,26 +5,25 @@
 #include <QSqlDatabase>
 #include <QString>
 #include <tl/expected.hpp>
-#include <QVector>
 
 namespace Categories {
 
 class Repository
 {
 public:
-    explicit Repository(QSqlDatabase db);
+    explicit Repository(const QSqlDatabase& db);
 
-    tl::expected<Categories::Category, QString> createCategory(const QString& name);
-    tl::expected<Categories::Category, QString> getCategoryById(const int id);
-    tl::expected<Categories::Category, QString> getCategoryByName(const QString& name);
-    tl::expected<QVector<Categories::Category>, QString> getAllCategories();
-    tl::expected<Categories::Category, QString> updateCategoryById(const int id, const Categories::Category& category);
-    tl::expected<int, QString> deleteCategoryById(const int id);
-    tl::expected<int, QString> deleteCategoryByName(const QString& name);
+    [[nodiscard]] tl::expected<Category, QString> createCategory(const QString& name) const;
+    [[nodiscard]] tl::expected<Category, QString> getCategoryById(int id) const;
+    [[nodiscard]] tl::expected<Category, QString> getCategoryByName(const QString& name) const;
+    [[nodiscard]] tl::expected<QVector<Category>, QString> getAllCategories() const;
+    [[nodiscard]] tl::expected<Category, QString> updateCategoryById(int id, const Category& category) const;
+    [[nodiscard]] tl::expected<int, QString> deleteCategoryById(int id) const;
+    [[nodiscard]] tl::expected<int, QString> deleteCategoryByName(const QString& name) const;
 
 private:
     QSqlDatabase m_db;
-    tl::expected<void, QString> createCategoriesTable();
+    [[nodiscard]] tl::expected<void, QString> createCategoriesTable() const;
 };
 
 

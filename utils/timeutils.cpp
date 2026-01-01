@@ -3,10 +3,10 @@
 QString Utils::TimeFormatter::formatTime(int durationMs) {
     if (durationMs < 0) return "Invalid";
     
-    int hours = durationMs / 3600000;
-    int minutes = (durationMs % 3600000) / 60000;
-    int seconds = (durationMs % 60000) / 1000;
-    int centiseconds = (durationMs % 1000) / 10;
+    const int hours = durationMs / 3600000;
+    const int minutes = (durationMs % 3600000) / 60000;
+    const int seconds = (durationMs % 60000) / 1000;
+    const int centiseconds = (durationMs % 1000) / 10;
     
     if (hours > 0) {
         return QString("%1:%2:%3.%4")
@@ -25,9 +25,9 @@ QString Utils::TimeFormatter::formatTime(int durationMs) {
 QString Utils::TimeFormatter::formatTimeShort(int durationMs) {
     if (durationMs < 0) return "Invalid";
     
-    int hours = durationMs / 3600000;
-    int minutes = (durationMs % 3600000) / 60000;
-    int seconds = (durationMs % 60000) / 1000;
+    const int hours = durationMs / 3600000;
+    const int minutes = (durationMs % 3600000) / 60000;
+    const int seconds = (durationMs % 60000) / 1000;
     
     if (hours > 0) {
         return QString("%1:%2:%3")
